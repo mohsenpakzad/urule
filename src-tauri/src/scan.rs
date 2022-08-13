@@ -148,6 +148,8 @@ pub struct Region {
     pub value: Value,
 }
 
+unsafe impl Send for Region {}
+
 macro_rules! impl_scannable_for_int {
     ( $( $ty:ty ),* ) => {
         $(

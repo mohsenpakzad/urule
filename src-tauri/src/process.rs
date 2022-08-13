@@ -1,5 +1,5 @@
 use crate::scan::{Region, Scan, Scannable};
-use std::io;
+use std::{io,fmt};
 use std::mem::{self, MaybeUninit};
 use std::ptr::NonNull;
 use winapi::ctypes::c_void;
@@ -19,6 +19,8 @@ pub struct Process {
     pid: u32,
     handle: NonNull<c_void>,
 }
+
+unsafe impl Send for Process {}
 
 /// Enumerate the process identifiers of all programs currently running.
 pub fn enum_proc() -> io::Result<Vec<u32>> {
@@ -219,4 +221,16 @@ impl Drop for Process {
         let ret = unsafe { winapi::um::handleapi::CloseHandle(self.handle.as_mut()) };
         assert_ne!(ret, FALSE);
     }
+}
+
+#[derive(serde::Serialize)]
+pub struct ProcessItem {
+  pub pid: u32,
+  pub name: String,
+}
+
+impl fmt::Display for ProcessItem {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{} (pid={})", self.name, self.pid)
+  }
 }
