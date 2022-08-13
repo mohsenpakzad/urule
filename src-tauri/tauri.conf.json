@@ -7,7 +7,7 @@
     "distDir": "../dist/spa"
   },
   "package": {
-    "productName": "urule",
+    "productName": "Urule",
     "version": "0.1.0"
   },
   "tauri": {
@@ -58,7 +58,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "urule",
+        "title": "Urule",
         "width": 800
       }
     ]
