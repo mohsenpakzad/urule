@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { invoke } from '@tauri-apps/api';
-import { ProcessItem } from 'src/models';
-import { onStartTyping, useIntervalFn } from '@vueuse/core';
 import { useStore } from 'stores/main';
+import { onStartTyping, useIntervalFn } from '@vueuse/core';
+import { useUruleCore } from 'src/composables/useUruleCore';
+import { ProcessItem } from 'src/models';
 
 const store = useStore();
 const router = useRouter();
+const uruleCore = useUruleCore();
 
 const processListColumns = [
   {
@@ -45,7 +46,7 @@ onStartTyping(() => {
 
 onMounted(async () => {
   useIntervalFn(async () => {
-    processList.value = await invoke<ProcessItem[]>('get_processes');
+    processList.value = await uruleCore.getProcesses();
   }, 1000, {immediateCallback: true});
 });
 </script>
