@@ -71,7 +71,7 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
 
     println!("Scanning {} memory regions", regions.len());
     let scan = scan_str.parse::<Scan<Box<dyn Scannable>>>().unwrap();
-    let mut last_scan = process.scan_regions(&regions, scan);
+    let last_scan = process.scan_regions(&regions, scan);
     println!(
         "Found {} locations",
         last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
