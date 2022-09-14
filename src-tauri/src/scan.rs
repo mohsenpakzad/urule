@@ -4,6 +4,7 @@ use std::fmt;
 use std::mem;
 use std::ops::Range;
 use std::str::FromStr;
+use serde::Serialize;
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
 
 /// Represents the scan mode according associated to a certain type.
@@ -109,7 +110,7 @@ pub enum Scan<T: Scannable> {
 }
 
 /// Candidate memory locations for holding our desired value.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum CandidateLocations {
     /// Multiple, separated locations.
     ///
@@ -129,7 +130,7 @@ pub enum CandidateLocations {
 }
 
 /// A value found in memory.
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum Value {
     /// All the values exactly matched this at the time of the scan.
     Exact(Vec<u8>),
@@ -138,9 +139,10 @@ pub enum Value {
 }
 
 /// A memory region.
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Region {
     /// The raw information about this memory region.
+    #[serde(skip_serializing)]
     pub info: MEMORY_BASIC_INFORMATION,
     /// Candidate locations that should be considered during subsequent scans.
     pub locations: CandidateLocations,

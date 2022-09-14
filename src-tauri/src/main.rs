@@ -32,9 +32,25 @@ impl AppState {
 fn main() {
     tauri::Builder::default()
         .manage(AppState::new())
-        .invoke_handler(tauri::generate_handler![get_processes, first_scan, next_scan])
+        .invoke_handler(tauri::generate_handler![
+            get_opened_process,
+            get_last_scan,
+            get_processes,
+            first_scan,
+            next_scan,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn get_opened_process(state: tauri::State<AppState>) -> Option<Process> {
+    state.opened_process.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region> {
+    state.last_scan.lock().unwrap().clone()
 }
 
 #[tauri::command]

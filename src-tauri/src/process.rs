@@ -2,6 +2,7 @@ use crate::scan::{Region, Scan, Scannable};
 use std::{io,fmt};
 use std::mem::{self, MaybeUninit};
 use std::ptr::NonNull;
+use serde::Serialize; 
 use winapi::ctypes::c_void;
 use winapi::shared::minwindef::{DWORD, FALSE, HMODULE};
 use winapi::um::winnt;
@@ -14,9 +15,10 @@ const MAX_PIDS: usize = 1024;
 const MAX_PROC_NAME_LEN: usize = 64;
 
 /// A handle to an opened process.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Process {
     pid: u32,
+    #[serde(skip_serializing)]
     handle: NonNull<c_void>,
 }
 
