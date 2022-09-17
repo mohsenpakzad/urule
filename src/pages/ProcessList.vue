@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { useStore } from 'stores/main';
 import { onStartTyping, useIntervalFn } from '@vueuse/core';
 import { useUruleCore } from 'src/composables/useUruleCore';
-import { ProcessItem } from 'src/models';
+import { Process } from 'src/models/core';
 
 const store = useStore();
 const router = useRouter();
@@ -17,7 +17,7 @@ const processListColumns = [
     label: 'Name',
     align: 'left',
     sortable: true,
-    field: (p: ProcessItem) => p.name,
+    field: (p: Process) => p.name,
   },
   {
     name: 'pid',
@@ -25,17 +25,17 @@ const processListColumns = [
     label: 'Pid',
     align: 'left',
     sortable: true,
-    field: (p: ProcessItem) => p.pid,
+    field: (p: Process) => p.pid,
   },
 ];
-const processList = ref<ProcessItem[]>([])
+const processList = ref<Process[]>([])
 const processesFilter = ref<string>()
-const selectedProcess = ref<ProcessItem[]>([])
+const selectedProcess = ref<Process[]>([])
 
 const searchInput = ref<HTMLInputElement | null>(null)
 
 function getSelectedString() {
-  const process: ProcessItem = selectedProcess.value[0]
+  const process: Process = selectedProcess.value[0]
   return `${process.name} - ${process.pid} selected.`
 }
 

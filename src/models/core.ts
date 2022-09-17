@@ -3,7 +3,7 @@ export interface Range {
   end: number
 }
 
-export interface ProcessItem {
+export interface Process {
   pid: number;
   name?: string;
 }

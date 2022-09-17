@@ -1,10 +1,10 @@
 import { invoke } from '@tauri-apps/api';
-import { ProcessItem, Region } from 'src/models';
+import { Process, Region } from 'src/models/core';
 
 export function useUruleCore() {
 
   async function getOpenedProcess() {
-    return await invoke<ProcessItem>('get_opened_process')
+    return await invoke<Process>('get_opened_process')
   }
 
   async function getLastScan() {
@@ -12,7 +12,7 @@ export function useUruleCore() {
   }
 
   async function getProcesses() {
-    return await invoke<ProcessItem[]>('get_processes')
+    return await invoke<Process[]>('get_processes')
   }
 
   async function firstScan(pid: number, scanStr: string) {

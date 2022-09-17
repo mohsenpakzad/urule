@@ -1,10 +1,10 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { ProcessItem } from 'src/models';
+import { Process } from 'src/models/core';
 
 export const useStore = defineStore('main', () => {
 
-  const openedProcess = ref<ProcessItem>();
+  const openedProcess = ref<Process>();
 
   return {
     openedProcess,
