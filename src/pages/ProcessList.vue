@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router';
 import { useStore } from 'stores/main';
 import { onStartTyping, useIntervalFn } from '@vueuse/core';
 import { useUruleCore } from 'src/composables/useUruleCore';
+import { useFormatter } from 'src/composables/useFormatter';
 import { Process } from 'src/models/core';
 
 const store = useStore();
 const router = useRouter();
 const uruleCore = useUruleCore();
+const formatter = useFormatter();
 
 const processListColumns = [
   {
@@ -35,8 +37,7 @@ const selectedProcess = ref<Process[]>([])
 const searchInput = ref<HTMLInputElement | null>(null)
 
 function getSelectedString() {
-  const process: Process = selectedProcess.value[0]
-  return `${process.name} - ${process.pid} selected.`
+  return `${formatter.formatProcess(selectedProcess.value[0])} selected.`
 }
 
 async function openProcess() {
