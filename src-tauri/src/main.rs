@@ -34,6 +34,7 @@ fn main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             get_opened_process,
+            write_opened_process_memory,
             get_last_scan,
             get_processes,
             first_scan,
@@ -46,6 +47,13 @@ fn main() {
 #[tauri::command]
 fn get_opened_process(state: tauri::State<AppState>) -> Option<Process> {
     state.opened_process.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn write_opened_process_memory(address: usize, value: Vec<u8>,
+                               state: tauri::State<AppState>) -> Option<usize> {
+   state.opened_process.lock().unwrap().as_ref().unwrap().write_memory(address, &value)
+       .ok()
 }
 
 #[tauri::command]
