@@ -20,11 +20,11 @@ export function useUruleCore() {
   }
 
   async function firstScan(pid: number, scanStr: string) {
-    await invoke('first_scan', {pid, scanStr})
+    await invoke<void>('first_scan', {pid, scanStr})
   }
 
   async function nextScan(scanStr: string) {
-    await invoke('next_scan', {scanStr})
+    await invoke<void>('next_scan', {scanStr})
   }
 
   return {
