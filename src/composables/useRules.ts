@@ -1,4 +1,8 @@
+import { useFormatter } from 'src/composables/useFormatter';
+
 export function useRules() {
+
+  const formatter = useFormatter();
 
   function ruleRequired(value: never) {
     return !!value || 'Required'
@@ -6,7 +10,8 @@ export function useRules() {
 
   function ruleBetween(min: number, max: number) {
     return (value: number) =>
-      value >= min && value <= max || `Value should between ${min.toLocaleString()} and ${max.toLocaleString()}`
+      value >= min && value <= max ||
+      `Value should between ${formatter.formatNumber(min)} and ${formatter.formatNumber(max)}`
   }
 
   function ruleInteger(value: string) {
@@ -19,12 +24,12 @@ export function useRules() {
 
   function ruleSmaller(max: number) {
     return (value: number) =>
-      value < max || `Value should smaller than ${max.toLocaleString()}`
+      value < max || `Value should smaller than ${formatter.formatNumber(max)}`
   }
 
   function ruleBigger(min: number) {
     return (value: number) =>
-      value > min || `Value should bigger than ${min.toLocaleString()}`
+      value > min || `Value should bigger than ${formatter.formatNumber(min)}`
   }
 
   return {
