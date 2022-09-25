@@ -335,6 +335,7 @@ async function newScan() {
                 dense
                 v-model="scanForm.value.exact"
                 :rules="scanValueRules()"
+                clearable
               />
             </template>
             <div
@@ -349,6 +350,7 @@ async function newScan() {
                 v-model="scanForm.value.range.min"
                 reactive-rules
                 :rules="scanValueMinRangeRules"
+                clearable
               />
 
               <q-input
@@ -359,6 +361,7 @@ async function newScan() {
                 v-model="scanForm.value.range.max"
                 reactive-rules
                 :rules="scanValueMaxRangeRules"
+                clearable
               />
             </div>
           </div>
