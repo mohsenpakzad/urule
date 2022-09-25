@@ -336,6 +336,7 @@ async function newScan() {
                 v-model="scanForm.value.exact"
                 :rules="scanValueRules()"
                 clearable
+                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
               />
             </template>
             <div
@@ -351,6 +352,7 @@ async function newScan() {
                 reactive-rules
                 :rules="scanValueMinRangeRules"
                 clearable
+                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
               />
 
               <q-input
@@ -362,6 +364,7 @@ async function newScan() {
                 reactive-rules
                 :rules="scanValueMaxRangeRules"
                 clearable
+                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
               />
             </div>
           </div>

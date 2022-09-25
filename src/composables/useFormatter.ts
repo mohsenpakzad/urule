@@ -16,8 +16,13 @@ export function useFormatter() {
     return `${process.name} - ${process.pid}`
   }
 
+  function formatMinMaxValue(min: number, max: number){
+    return `Min: ${formatNumber(min)}, Max: ${formatNumber(max)}`
+  }
+
   return {
     formatNumber,
     formatProcess,
+    formatMinMaxValue,
   }
 }
