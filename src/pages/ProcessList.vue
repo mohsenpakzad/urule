@@ -36,6 +36,8 @@ const selectedProcess = ref<Process[]>([])
 
 const searchInput = ref<HTMLInputElement | null>(null)
 
+const processListLoading = ref<boolean>(true)
+
 function getSelectedString() {
   return `${formatter.formatProcess(selectedProcess.value[0])} selected.`
 }
@@ -53,6 +55,7 @@ onStartTyping(() => {
 onMounted(async () => {
   useIntervalFn(async () => {
     processList.value = await uruleCore.getProcesses();
+    if (processListLoading.value) processListLoading.value = false
   }, 1000, {immediateCallback: true});
 });
 </script>
@@ -75,6 +78,7 @@ onMounted(async () => {
       v-model:selected="selectedProcess"
       :pagination="{sortBy: 'name'}"
       :selected-rows-label="getSelectedString"
+      :loading="processListLoading"
     >
       <template v-slot:top-right>
         <q-input
