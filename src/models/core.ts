@@ -26,6 +26,6 @@ export interface Region {
 }
 
 export interface Address {
-  name: string;
+  pointer: number;
   value: number;
 }
