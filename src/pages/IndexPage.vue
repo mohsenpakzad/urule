@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useStore } from 'stores/main';
+import { QForm } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
@@ -159,6 +160,7 @@ const valueTypeOptions = [
   },
 ];
 
+const scanFormObject = ref<QForm>()
 const scanForm = reactive({
   scanType: allScanTypeOptions.find(e => e.value === ScanType.Exact),
   valueType: valueTypeOptions.find(e => e.value === ValueType.I32),
@@ -204,8 +206,16 @@ const scanValueMaxRangeRules = computed(() => {
   ]
 })
 
+async function validateScanForm() {
+  return (await scanFormObject.value?.validate())
+}
+
+async function resetValidationScanForm() {
+  return (await scanFormObject.value?.resetValidation())
+}
+
 async function firstScan() {
-  if (!store.openedProcess) return;
+  if (!store.openedProcess || !(await validateScanForm())) return;
 
   // todo
 
@@ -213,7 +223,7 @@ async function firstScan() {
 }
 
 async function nextScan() {
-  // todo
+  if (!(await validateScanForm())) return;
 }
 
 async function undoScan() {
@@ -222,6 +232,8 @@ async function undoScan() {
 
 async function newScan() {
   addressList.value = []
+  await resetValidationScanForm()
+
   scanState.value = ScanState.BeforeInitialScan;
 }
 </script>
@@ -234,7 +246,11 @@ async function newScan() {
         bordered
         flat
       >
-        <div class="q-gutter-y-sm">
+        <q-form
+          class="q-gutter-y-sm"
+          ref="scanFormObject"
+        >
+          <!-- TODO: rename scanFrom to scanFormData and scanFormObject to scanForm -->
 
           <q-chip
             icon="saved_search"
@@ -248,7 +264,9 @@ async function newScan() {
             }}
           </q-chip>
 
-          <q-form class="row items-start q-mb-md">
+          <div
+            class="row items-start q-mb-md"
+          >
             <template
               v-if="scanState === ScanState.BeforeInitialScan"
             >
@@ -301,7 +319,7 @@ async function newScan() {
                 type="reset"
               />
             </template>
-          </q-form>
+          </div>
 
           <div class="row q-gutter-sm">
             <q-select
@@ -369,7 +387,7 @@ async function newScan() {
             </div>
           </div>
 
-        </div>
+        </q-form>
       </q-card>
 
       <q-table
