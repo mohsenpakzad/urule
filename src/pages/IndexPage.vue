@@ -22,7 +22,7 @@ const addressTableColumns = [
     label: 'Address',
     align: 'left',
     sortable: true,
-    field: (p: Address) => p.name,
+    field: (p: Address) => formatter.formatNumberToHex(p.pointer),
   },
   {
     name: 'value',

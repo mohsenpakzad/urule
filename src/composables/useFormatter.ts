@@ -20,9 +20,14 @@ export function useFormatter() {
     return `Min: ${formatNumber(min)}, Max: ${formatNumber(max)}`
   }
 
+  function formatNumberToHex(num: number) {
+    return `0x${num.toString(16).toUpperCase()}`
+  }
+
   return {
     formatNumber,
     formatProcess,
     formatMinMaxValue,
+    formatNumberToHex,
   }
 }
