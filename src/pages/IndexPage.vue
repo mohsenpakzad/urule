@@ -224,7 +224,7 @@ async function firstScan() {
   if (!store.openedProcess || !(await validateScanForm())) return;
   q.loading.show();
 
-  await uruleCore.firstScan(store.openedProcess!.pid, scanData.value.exact);
+  await uruleCore.firstScan(store.openedProcess.pid, scanData.value.exact);
   addressList.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
