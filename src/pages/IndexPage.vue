@@ -212,16 +212,8 @@ const scanValueMaxRangeRules = computed(() => {
   ]
 })
 
-async function validateScanForm() {
-  return (await scanForm.value?.validate())
-}
-
-async function resetValidationScanForm() {
-  return (await scanForm.value?.resetValidation())
-}
-
 async function firstScan() {
-  if (!store.openedProcess || !(await validateScanForm())) return;
+  if (!store.openedProcess || !(await scanForm.value?.validate())) return;
   q.loading.show();
 
   await uruleCore.firstScan(store.openedProcess.pid, scanData.value.exact);
@@ -232,7 +224,7 @@ async function firstScan() {
 }
 
 async function nextScan() {
-  if (!(await validateScanForm())) return;
+  if (!(await scanForm.value?.validate())) return;
   q.loading.show();
 
   await uruleCore.nextScan(scanData.value.exact);
@@ -247,7 +239,7 @@ async function undoScan() {
 
 async function newScan() {
   addressList.value = []
-  await resetValidationScanForm()
+  await scanForm.value?.resetValidation()
 
   scanState.value = ScanState.BeforeInitialScan;
 }
