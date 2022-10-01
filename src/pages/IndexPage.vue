@@ -422,7 +422,7 @@ function writeMemory() {
         :rows="addressList"
         :columns="addressTableColumns"
         rows-per-page-options="0"
-        row-key="name"
+        row-key="pointer"
         selection="multiple"
         v-model:selected="selectedAddresses"
       >
