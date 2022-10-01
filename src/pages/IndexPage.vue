@@ -187,25 +187,26 @@ const scanTypeOptionsRequiredInputs = computed(() => {
   }
 });
 
-function scanValueRules() {
+function baseScanValueRules() {
   return [
     rules.ruleRequired,
     scanForm.valueType?.format,
     rules.ruleBetween(scanForm.valueType!.min, scanForm.valueType!.max),
   ]
 }
+const scanValueRules = computed(() => baseScanValueRules())
 
 const scanValueMinRangeRules = computed(() => {
   const max = parseFloat(scanForm.value.range.max);
   return [
-    ...scanValueRules(),
+    ...baseScanValueRules(),
     max ? rules.ruleSmaller(max) : undefined,
   ]
 })
 const scanValueMaxRangeRules = computed(() => {
   const min = parseFloat(scanForm.value.range.min);
   return [
-    ...scanValueRules(),
+    ...baseScanValueRules(),
     min ? rules.ruleBigger(min) : undefined,
   ]
 })
@@ -361,7 +362,8 @@ function writeMemory() {
                 outlined
                 dense
                 v-model="scanForm.value.exact"
-                :rules="scanValueRules()"
+                reactive-rules
+                :rules="scanValueRules"
                 clearable
                 :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
               />
