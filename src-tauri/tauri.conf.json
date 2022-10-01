@@ -55,11 +55,11 @@
     },
     "windows": [
       {
-        "fullscreen": false,
-        "height": 600,
-        "resizable": true,
         "title": "Urule",
-        "width": 800
+        "fullscreen": false,
+        "resizable": true,
+        "height": 750,
+        "width": 700
       }
     ]
   }
