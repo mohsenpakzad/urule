@@ -36,9 +36,9 @@ export function useUruleCore() {
   function convertRegionsToAddresses(lastScanRegions: Region[]) {
     return lastScanRegions.flatMap(region => {
 
-      if (region.locations.Discrete) {
-        const locations = region.locations.Discrete!.locations;
-        const value = byteArrayToLong(region.value.Exact!)
+      if (region.locations.Discrete && region.value.Exact) {
+        const locations = region.locations.Discrete.locations;
+        const value = byteArrayToLong(region.value.Exact)
 
         return locations.map(location => <Address>{pointer: location, value})
       }
