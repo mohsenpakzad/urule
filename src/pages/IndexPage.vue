@@ -106,6 +106,7 @@ async function undoScan() {
 
 async function newScan() {
   addressList.value = []
+  selectedAddresses.value = []
   await scanForm.value?.resetValidation()
 
   scanState.value = ScanState.BeforeInitialScan;
