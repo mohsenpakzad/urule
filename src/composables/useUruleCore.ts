@@ -23,10 +23,12 @@ export function useUruleCore() {
     return await invoke<Process[]>('get_processes')
   }
 
+  // TODO: add scan config to scan parameters
   async function firstScan(pid: number, scanStr: string) {
     await invoke<void>('first_scan', {pid, scanStr})
   }
 
+  // TODO: add scan config to scan parameters
   async function nextScan(scanStr: string) {
     await invoke<void>('next_scan', {scanStr})
   }
@@ -45,6 +47,7 @@ export function useUruleCore() {
     })
   }
 
+  // TODO: clean this code
   function longToByteArray(/*long*/long: number) {
     // we want to represent the input as a 8-bytes array
     const byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -58,6 +61,7 @@ export function useUruleCore() {
     return byteArray;
   }
 
+  // TODO: clean this code
   function byteArrayToLong(/*byte[]*/byteArray: number[]) {
     let value = 0;
     for (let i = byteArray.length - 1; i >= 0; i--) {
