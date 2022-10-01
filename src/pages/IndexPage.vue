@@ -162,8 +162,8 @@ const valueTypeOptions = [
   },
 ];
 
-const scanFormObject = ref<QForm>()
-const scanForm = reactive({
+const scanForm = ref<QForm>()
+const scanData = reactive({
   scanType: allScanTypeOptions.find(e => e.value === ScanType.Exact),
   valueType: valueTypeOptions.find(e => e.value === ValueType.I32),
   value: {
@@ -176,7 +176,7 @@ const changeValueDialog = ref<boolean>(false);
 const changeValueDialogInput = ref<string>('');
 
 const scanTypeOptionsRequiredInputs = computed(() => {
-  switch (scanForm.scanType?.value) {
+  switch (scanData.scanType?.value) {
     case ScanType.Exact:
     case ScanType.DecreasedBy:
     case ScanType.IncreasedBy:
@@ -191,21 +191,21 @@ const scanTypeOptionsRequiredInputs = computed(() => {
 function baseScanValueRules() {
   return [
     rules.ruleRequired,
-    scanForm.valueType?.format,
-    rules.ruleBetween(scanForm.valueType!.min, scanForm.valueType!.max),
+    scanData.valueType?.format,
+    rules.ruleBetween(scanData.valueType!.min, scanData.valueType!.max),
   ]
 }
 const scanValueRules = computed(() => baseScanValueRules())
 
 const scanValueMinRangeRules = computed(() => {
-  const max = parseFloat(scanForm.value.range.max);
+  const max = parseFloat(scanData.value.range.max);
   return [
     ...baseScanValueRules(),
     max ? rules.ruleSmaller(max) : undefined,
   ]
 })
 const scanValueMaxRangeRules = computed(() => {
-  const min = parseFloat(scanForm.value.range.min);
+  const min = parseFloat(scanData.value.range.min);
   return [
     ...baseScanValueRules(),
     min ? rules.ruleBigger(min) : undefined,
@@ -213,18 +213,18 @@ const scanValueMaxRangeRules = computed(() => {
 })
 
 async function validateScanForm() {
-  return (await scanFormObject.value?.validate())
+  return (await scanForm.value?.validate())
 }
 
 async function resetValidationScanForm() {
-  return (await scanFormObject.value?.resetValidation())
+  return (await scanForm.value?.resetValidation())
 }
 
 async function firstScan() {
   if (!store.openedProcess || !(await validateScanForm())) return;
   q.loading.show();
 
-  await uruleCore.firstScan(store.openedProcess!.pid, scanForm.value.exact);
+  await uruleCore.firstScan(store.openedProcess!.pid, scanData.value.exact);
   addressList.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
@@ -235,7 +235,7 @@ async function nextScan() {
   if (!(await validateScanForm())) return;
   q.loading.show();
 
-  await uruleCore.nextScan(scanForm.value.exact);
+  await uruleCore.nextScan(scanData.value.exact);
   addressList.value = await uruleCore.getLastScan();
 
   q.loading.hide();
@@ -278,9 +278,8 @@ function writeMemory() {
       >
         <q-form
           class="q-gutter-y-sm"
-          ref="scanFormObject"
+          ref="scanForm"
         >
-          <!-- TODO: rename scanFrom to scanFormData and scanFormObject to scanForm -->
 
           <q-chip
             icon="saved_search"
@@ -359,7 +358,7 @@ function writeMemory() {
               outlined
               dense
               options-dense
-              v-model="scanForm.scanType"
+              v-model="scanData.scanType"
             />
             <q-select
               class="col"
@@ -368,7 +367,7 @@ function writeMemory() {
               outlined
               dense
               options-dense
-              v-model="scanForm.valueType"
+              v-model="scanData.valueType"
               :readonly="scanState === ScanState.AfterInitialScan"
             />
           </div>
@@ -381,11 +380,11 @@ function writeMemory() {
                 label="Value"
                 outlined
                 dense
-                v-model="scanForm.value.exact"
+                v-model="scanData.value.exact"
                 reactive-rules
                 :rules="scanValueRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
+                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
               />
             </template>
             <div
@@ -397,11 +396,11 @@ function writeMemory() {
                 label="Minimum Value"
                 outlined
                 dense
-                v-model="scanForm.value.range.min"
+                v-model="scanData.value.range.min"
                 reactive-rules
                 :rules="scanValueMinRangeRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
+                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
               />
 
               <q-input
@@ -409,11 +408,11 @@ function writeMemory() {
                 label="Maximum Value"
                 outlined
                 dense
-                v-model="scanForm.value.range.max"
+                v-model="scanData.value.range.max"
                 reactive-rules
                 :rules="scanValueMaxRangeRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanForm.valueType.min, scanForm.valueType.max)"
+                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
               />
             </div>
           </div>
