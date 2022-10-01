@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useStore } from 'stores/main';
-import { QForm } from 'quasar';
+import { QForm, useQuasar } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
@@ -12,6 +12,7 @@ const store = useStore();
 const uruleCore = useUruleCore();
 const formatter = useFormatter();
 const rules = useRules();
+const q = useQuasar();
 
 
 const scanState = ref<ScanState>(ScanState.BeforeInitialScan);
@@ -221,18 +222,23 @@ async function resetValidationScanForm() {
 
 async function firstScan() {
   if (!store.openedProcess || !(await validateScanForm())) return;
+  q.loading.show();
 
   await uruleCore.firstScan(store.openedProcess!.pid, scanForm.value.exact);
   addressList.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
+  q.loading.hide();
 }
 
 async function nextScan() {
   if (!(await validateScanForm())) return;
+  q.loading.show();
 
   await uruleCore.nextScan(scanForm.value.exact);
   addressList.value = await uruleCore.getLastScan();
+
+  q.loading.hide();
 }
 
 async function undoScan() {
