@@ -5,6 +5,8 @@ import {
 } from 'vue-router';
 
 import routes from './routes';
+import { WebviewWindow } from '@tauri-apps/api/window';
+import { tauri } from 'app/src-tauri/tauri.conf.json';
 
 /*
  * If not building with SSR mode, you can
@@ -24,6 +26,16 @@ export default route(function (/* { store, ssrContext } */) {
     // quasar.conf.js -> build -> vueRouterMode
     // quasar.conf.js -> build -> publicPath
     history: createWebHistory(),
+  });
+
+  const mainWindow = WebviewWindow.getByLabel('main');
+  const originalWindowTitle = tauri.windows[0].title;
+  Router.afterEach(async (to) => {
+    if (to.name){
+      await mainWindow?.setTitle(`${originalWindowTitle} - ${to.name.toString()}`);
+    } else {
+      await mainWindow?.setTitle(originalWindowTitle);
+    }
   });
 
   return Router;
