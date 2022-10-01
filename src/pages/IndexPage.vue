@@ -35,6 +35,7 @@ const addressTableColumns = [
   },
 ];
 const addressList = ref<Address[]>();
+const selectedAddresses = ref<Address[]>([]);
 
 const allScanTypeOptions = [
   {
@@ -170,6 +171,9 @@ const scanForm = reactive({
   }
 })
 
+const changeValueDialog = ref<boolean>(false);
+const changeValueDialogInput = ref<string>('');
+
 const scanTypeOptionsRequiredInputs = computed(() => {
   switch (scanForm.scanType?.value) {
     case ScanType.Exact:
@@ -235,6 +239,11 @@ async function newScan() {
   await resetValidationScanForm()
 
   scanState.value = ScanState.BeforeInitialScan;
+}
+
+function writeMemory() {
+
+  changeValueDialogInput.value = ''
 }
 </script>
 
@@ -391,8 +400,9 @@ async function newScan() {
       </q-card>
 
       <q-table
-        class="q-pa-lg"
+        class="q-pt-sm"
         style="height: 55vh"
+        title="Found Addresses"
         bordered
         flat
         dense
@@ -400,35 +410,40 @@ async function newScan() {
         :columns="addressTableColumns"
         rows-per-page-options="0"
         row-key="name"
+        selection="multiple"
+        v-model:selected="selectedAddresses"
       >
-        <template v-slot:body="props">
-          <q-tr :props="props">
-            <q-td key="name" :props="props">{{ props.row.name }}</q-td>
-            <q-td key="value" :props="props">
-              {{ props.row.value }}
-              <q-popup-edit
-                :ref="addressPopup"
-                v-model="props.row.value"
-                title="Update value"
-              >
+        <template v-slot:top-right>
+          <q-btn
+            v-if="selectedAddresses.length > 0"
+            label="Change value of selected addresses"
+            color="primary"
+            icon="edit"
+            size="0.73rem"
+            @click="changeValueDialog = true"
+          />
+          <q-dialog v-model="changeValueDialog">
+            <q-card style="min-width: 350px">
+              <q-card-section>
+                <div class="text-h6">Enter new value for selected addresses</div>
+              </q-card-section>
+
+              <q-card-section class="q-pt-none">
+              <!-- TODO: add more validation -->
                 <q-input
-                  type="number"
-                  v-model="props.row.value"
                   dense
+                  v-model="changeValueDialogInput"
                   autofocus
-                  hint="Use buttons to close"
+                  :rules="[rules.ruleRequired, rules.ruleInteger]"
                 />
-                <div class="row items-center">
-                  <q-btn
-                    class="col"
-                    label="Set"
-                    flat
-                    @click.stop.prevent="writeMemory(props.row)"
-                  />
-                </div>
-              </q-popup-edit>
-            </q-td>
-          </q-tr>
+              </q-card-section>
+
+              <q-card-actions align="right" class="text-primary">
+                <q-btn flat label="Cancel" v-close-popup @click="changeValueDialogInput = ''"/>
+                <q-btn flat label="Save" v-close-popup @click="writeMemory"/>
+              </q-card-actions>
+            </q-card>
+          </q-dialog>
         </template>
       </q-table>
     </div>
