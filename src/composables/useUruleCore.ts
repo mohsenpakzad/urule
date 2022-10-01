@@ -7,8 +7,11 @@ export function useUruleCore() {
     return await invoke<Process>('get_opened_process')
   }
 
-  async function writeOpenedProcessMemory(address: number, value: number[]) {
-    return await invoke<number | null>('write_opened_process_memory', {address, value})
+  async function writeOpenedProcessMemory(address: number, value: number) {
+    return await invoke<number | null>(
+      'write_opened_process_memory',
+      {address, value: longToByteArray(value)}
+    )
   }
 
   async function getLastScan() {
