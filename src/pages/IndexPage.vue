@@ -59,7 +59,7 @@ function baseScanValueRules() {
   return [
     rules.ruleRequired,
     scanData.valueType?.format,
-    rules.ruleBetween(scanData.valueType!.min, scanData.valueType!.max),
+    scanData.valueType ? rules.ruleBetween(scanData.valueType.min, scanData.valueType.max) : undefined,
   ]
 }
 
