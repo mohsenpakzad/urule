@@ -222,13 +222,17 @@ async function resetValidationScanForm() {
 async function firstScan() {
   if (!store.openedProcess || !(await validateScanForm())) return;
 
-  // todo
+  await uruleCore.firstScan(store.openedProcess!.pid, scanForm.value.exact);
+  addressList.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
 }
 
 async function nextScan() {
   if (!(await validateScanForm())) return;
+
+  await uruleCore.nextScan(scanForm.value.exact);
+  addressList.value = await uruleCore.getLastScan();
 }
 
 async function undoScan() {
@@ -243,6 +247,16 @@ async function newScan() {
 }
 
 function writeMemory() {
+  selectedAddresses.value.forEach(async address => {
+    const value = parseFloat(changeValueDialogInput.value);
+    const writtenBytes = await uruleCore.writeOpenedProcessMemory(address.pointer, value)
+
+    // TODO: instead of this, fetch these addresses value from last scan again
+    if (writtenBytes){
+      address.value = value
+    }
+    console.log(`${writtenBytes} bytes written.`)
+  })
 
   changeValueDialogInput.value = ''
 }
