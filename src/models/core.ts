@@ -1,6 +1,6 @@
 export interface Range {
-  start: number,
-  end: number
+  start: number;
+  end: number;
 }
 
 export interface Process {
@@ -9,15 +9,15 @@ export interface Process {
 }
 
 export interface CandidateLocations {
-  Discrete?: { locations: number[] }
-  SmallDiscrete?: { base: number, offsets: number[] },
-  Dense?: { range: Range, step: number },
-  Sparse?: { base: number, mask: boolean[], scale: number },
+  Discrete?: { locations: number[] };
+  SmallDiscrete?: { base: number; offsets: number[] };
+  Dense?: { range: Range; step: number };
+  Sparse?: { base: number; mask: boolean[]; scale: number };
 }
 
 export interface Value {
-  Exact?: number[],
-  AnyWithin?: { memory: number[], size: number }
+  Exact?: number[];
+  AnyWithin?: { memory: number[]; size: number };
 }
 
 export interface Region {
