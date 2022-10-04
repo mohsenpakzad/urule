@@ -5,7 +5,7 @@ export interface Range {
 
 export interface Process {
   pid: number;
-  name?: string;
+  name: string;
 }
 
 export interface CandidateLocations {
