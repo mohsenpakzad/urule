@@ -1,14 +1,14 @@
 #![cfg_attr(
-  all(not(debug_assertions), target_os = "windows"),
-  windows_subsystem = "windows"
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
 )]
 
 mod process;
 mod scan;
 
-use std::sync::Mutex;
 use process::{Process, ProcessItem};
-use scan::{Scan, Scannable, Region};
+use scan::{Region, Scan, Scannable};
+use std::sync::Mutex;
 use winapi::um::winnt;
 
 pub struct AppState {
@@ -57,10 +57,19 @@ fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessItem> {
 }
 
 #[tauri::command]
-fn write_opened_process_memory(address: usize, value: Vec<u8>,
-                               state: tauri::State<AppState>) -> Option<usize> {
-   state.opened_process.lock().unwrap().as_ref().unwrap().write_memory(address, &value)
-       .ok()
+fn write_opened_process_memory(
+    address: usize,
+    value: Vec<u8>,
+    state: tauri::State<AppState>,
+) -> Option<usize> {
+    state
+        .opened_process
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .write_memory(address, &value)
+        .ok()
 }
 
 #[tauri::command]
@@ -114,11 +123,16 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
 #[tauri::command]
 fn next_scan(scan_str: String, state: tauri::State<AppState>) {
     let scan = scan_str.parse::<Scan<Box<dyn Scannable>>>().unwrap();
-    let last_scan = state.opened_process.lock().unwrap().as_ref().unwrap().rescan_regions(&state.last_scan.lock().unwrap(), scan);
+    let last_scan = state
+        .opened_process
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .rescan_regions(&state.last_scan.lock().unwrap(), scan);
     println!(
         "Now have {} locations",
         last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
     );
     *state.last_scan.lock().unwrap() = last_scan;
 }
-
