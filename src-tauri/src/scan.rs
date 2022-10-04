@@ -328,7 +328,7 @@ impl<T: Scannable> Scan<T> {
             Scan::DecreasedBy(value) | Scan::IncreasedBy(value) => value.mem_view().len(),
         };
 
-        let mut locations = CandidateLocations::Discrete {
+        let locations = CandidateLocations::Discrete {
             locations: region
                 .locations
                 .iter()
@@ -345,7 +345,6 @@ impl<T: Scannable> Scan<T> {
                 })
                 .collect(),
         };
-        locations.try_compact(size);
 
         Region {
             info: region.info.clone(),
@@ -591,103 +590,9 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn compact_uncompactable() {
-        // Dense
-        let mut locations = CandidateLocations::Dense {
-            range: 0x2000..0x2100,
-            step: 4,
-        };
-        locations.try_compact(4);
-        assert!(matches!(locations, CandidateLocations::Dense { .. }));
-
-        // Already compacted
-        let mut locations = CandidateLocations::SmallDiscrete {
-            base: 0x2000,
-            offsets: vec![0, 0x20, 0x40],
-        };
-        locations.try_compact(4);
-        assert!(matches!(
-            locations,
-            CandidateLocations::SmallDiscrete { .. }
-        ));
-
-        let mut locations = CandidateLocations::Sparse {
-            base: 0x2000,
-            mask: vec![true, false, false, false],
-            scale: 4,
-        };
-        locations.try_compact(4);
-        assert!(matches!(locations, CandidateLocations::Sparse { .. }));
-    }
-
-    #[test]
-    fn compact_not_worth() {
-        // Too small
-        let mut locations = CandidateLocations::Discrete {
-            locations: vec![0x2000],
-        };
-        let original = locations.clone();
-        locations.try_compact(4);
-        assert_eq!(locations, original);
-
-        // Too sparse and too large to fit in `SmallDiscrete`.
-        let mut locations = CandidateLocations::Discrete {
-            locations: vec![0x2000, 0x42000],
-        };
-        let original = locations.clone();
-        locations.try_compact(4);
-        assert_eq!(locations, original);
-    }
-
-    #[test]
-    fn compact_small_discrete() {
-        let mut locations = CandidateLocations::Discrete {
-            locations: vec![0x2000, 0x2004, 0x2040],
-        };
-        locations.try_compact(4);
-        assert_eq!(
-            locations,
-            CandidateLocations::SmallDiscrete {
-                base: 0x2000,
-                offsets: vec![0x0000, 0x0004, 0x0040],
-            }
-        );
-    }
-
-    #[test]
-    fn compact_sparse() {
-        let mut locations = CandidateLocations::Discrete {
-            locations: vec![
-                0x2000, 0x2004, 0x200c, 0x2010, 0x2014, 0x2018, 0x201c, 0x2020,
-            ],
-        };
-        locations.try_compact(4);
-        assert_eq!(
-            locations,
-            CandidateLocations::Sparse {
-                base: 0x2000,
-                mask: vec![true, true, false, true, true, true, true, true],
-                scale: 4,
-            }
-        );
-    }
-
-    #[test]
     fn iter_discrete() {
         let locations = CandidateLocations::Discrete {
             locations: vec![0x2000, 0x2004, 0x200c],
-        };
-        assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
-            vec![0x2000, 0x2004, 0x200c]
-        );
-    }
-
-    #[test]
-    fn iter_small_discrete() {
-        let locations = CandidateLocations::SmallDiscrete {
-            base: 0x2000,
-            offsets: vec![0x0000, 0x0004, 0x000c],
         };
         assert_eq!(
             locations.iter().collect::<Vec<_>>(),
@@ -704,19 +609,6 @@ mod candidate_location_tests {
         assert_eq!(
             locations.iter().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x2008, 0x200c]
-        );
-    }
-
-    #[test]
-    fn iter_sparse() {
-        let locations = CandidateLocations::Sparse {
-            base: 0x2000,
-            mask: vec![true, true, false, true],
-            scale: 4,
-        };
-        assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
-            vec![0x2000, 0x2004, 0x200c]
         );
     }
 }
