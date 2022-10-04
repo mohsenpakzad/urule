@@ -1,9 +1,9 @@
 use crate::scan::{Region, Scan, Scannable};
-use std::{io,fmt};
+use serde::Serialize;
 use std::mem::{self, MaybeUninit};
-use std::ptr::NonNull;
-use serde::Serialize; 
-use winapi::ctypes::c_void;
+use std::os::windows::io::{HandleOrNull, NullHandleError, OwnedHandle};
+use std::os::windows::prelude::AsRawHandle;
+use std::{fmt, io};
 use winapi::shared::minwindef::{DWORD, FALSE, HMODULE};
 use winapi::um::winnt;
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
@@ -15,11 +15,11 @@ const MAX_PIDS: usize = 1024;
 const MAX_PROC_NAME_LEN: usize = 64;
 
 /// A handle to an opened process.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Process {
     pid: u32,
     #[serde(skip_serializing)]
-    handle: NonNull<c_void>,
+    handle: OwnedHandle,
 }
 
 unsafe impl Send for Process {}
@@ -48,20 +48,20 @@ pub fn enum_proc() -> io::Result<Vec<u32>> {
 
 impl Process {
     /// Open a process handle given its process identifier.
-    pub fn open(pid: u32) -> io::Result<Self> {
+    pub fn open(pid: u32) -> Result<Self, NullHandleError> {
         // SAFETY: the call doesn't have dangerous side-effects
-        NonNull::new(unsafe {
-            winapi::um::processthreadsapi::OpenProcess(
+        unsafe {
+            HandleOrNull::from_raw_handle(winapi::um::processthreadsapi::OpenProcess(
                 winnt::PROCESS_QUERY_INFORMATION
                     | winnt::PROCESS_VM_READ
                     | winnt::PROCESS_VM_WRITE
                     | winnt::PROCESS_VM_OPERATION,
                 FALSE,
                 pid,
-            )
-        })
+            ))
+        }
+        .try_into()
         .map(|handle| Self { pid, handle })
-        .ok_or_else(io::Error::last_os_error)
     }
 
     /// Return the process identifier.
@@ -76,7 +76,7 @@ impl Process {
         // SAFETY: the pointer is valid and the size is correct.
         if unsafe {
             winapi::um::psapi::EnumProcessModules(
-                self.handle.as_ptr(),
+                self.handle.as_raw_handle(),
                 module.as_mut_ptr(),
                 mem::size_of::<HMODULE>() as u32,
                 &mut size,
@@ -93,7 +93,7 @@ impl Process {
         // SAFETY: the handle, module and buffer are all valid.
         let length = unsafe {
             winapi::um::psapi::GetModuleBaseNameA(
-                self.handle.as_ptr(),
+                self.handle.as_raw_handle(),
                 module,
                 buffer.as_mut_ptr().cast(),
                 buffer.capacity() as u32,
@@ -117,7 +117,7 @@ impl Process {
             // SAFETY: the info structure points to valid memory.
             let written = unsafe {
                 winapi::um::memoryapi::VirtualQueryEx(
-                    self.handle.as_ptr(),
+                    self.handle.as_raw_handle(),
                     base as *const _,
                     info.as_mut_ptr(),
                     mem::size_of::<MEMORY_BASIC_INFORMATION>(),
@@ -140,7 +140,7 @@ impl Process {
         // SAFETY: the buffer points to valid memory, and the buffer size is correctly set.
         if unsafe {
             winapi::um::memoryapi::ReadProcessMemory(
-                self.handle.as_ptr(),
+                self.handle.as_raw_handle(),
                 addr as *const _,
                 buffer.as_mut_ptr().cast(),
                 buffer.capacity(),
@@ -162,7 +162,7 @@ impl Process {
         // SAFETY: the input value buffer points to valid memory.
         if unsafe {
             winapi::um::memoryapi::WriteProcessMemory(
-                self.handle.as_ptr(),
+                self.handle.as_raw_handle(),
                 addr as *mut _,
                 value.as_ptr().cast(),
                 value.len(),
@@ -217,22 +217,14 @@ impl Process {
     }
 }
 
-impl Drop for Process {
-    fn drop(&mut self) {
-        // SAFETY: the handle is valid and non-null
-        let ret = unsafe { winapi::um::handleapi::CloseHandle(self.handle.as_mut()) };
-        assert_ne!(ret, FALSE);
-    }
-}
-
 #[derive(serde::Serialize)]
 pub struct ProcessItem {
-  pub pid: u32,
-  pub name: String,
+    pub pid: u32,
+    pub name: String,
 }
 
 impl fmt::Display for ProcessItem {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{} (pid={})", self.name, self.pid)
-  }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} (pid={})", self.name, self.pid)
+    }
 }
