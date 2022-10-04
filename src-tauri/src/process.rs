@@ -218,22 +218,22 @@ impl Process {
 }
 
 #[derive(serde::Serialize)]
-pub struct ProcessItem {
+pub struct ProcessView {
     pub pid: u32,
     pub name: String,
 }
 
-impl fmt::Display for ProcessItem {
+impl fmt::Display for ProcessView {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} (pid={})", self.name, self.pid)
     }
 }
 
-impl TryFrom<&Process> for ProcessItem {
+impl TryFrom<&Process> for ProcessView {
     type Error = io::Error;
 
     fn try_from(value: &Process) -> Result<Self, Self::Error> {
-        value.name().map(|name| ProcessItem {
+        value.name().map(|name| ProcessView {
             pid: value.pid,
             name,
         })

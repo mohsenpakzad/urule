@@ -6,7 +6,7 @@
 mod process;
 mod scan;
 
-use process::{Process, ProcessItem};
+use process::{Process, ProcessView};
 use scan::{Region, Scan, Scannable};
 use std::sync::Mutex;
 use winapi::um::winnt;
@@ -45,7 +45,7 @@ fn main() {
 }
 
 #[tauri::command]
-fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessItem> {
+fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessView> {
     state
         .opened_process
         .lock()
@@ -78,13 +78,13 @@ fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region> {
 }
 
 #[tauri::command]
-fn get_processes() -> Vec<ProcessItem> {
+fn get_processes() -> Vec<ProcessView> {
     process::enum_proc()
         .unwrap()
         .into_iter()
         .flat_map(Process::open)
         .flat_map(|proc| match proc.name() {
-            Ok(name) => Ok(ProcessItem {
+            Ok(name) => Ok(ProcessView {
                 pid: proc.pid(),
                 name,
             }),
