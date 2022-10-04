@@ -15,10 +15,9 @@ const MAX_PIDS: usize = 1024;
 const MAX_PROC_NAME_LEN: usize = 64;
 
 /// A handle to an opened process.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Process {
     pid: u32,
-    #[serde(skip_serializing)]
     handle: OwnedHandle,
 }
 
@@ -217,7 +216,7 @@ impl Process {
     }
 }
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 pub struct ProcessView {
     pub pid: u32,
     pub name: String,
