@@ -1,4 +1,5 @@
-use crate::scan::{Region, Scan, Scannable};
+use crate::region::Region;
+use crate::scan::{Scan, Scannable};
 use serde::Serialize;
 use std::mem::{self, MaybeUninit};
 use std::os::windows::io::{HandleOrNull, NullHandleError, OwnedHandle};

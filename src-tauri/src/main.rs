@@ -4,10 +4,12 @@
 )]
 
 mod process;
+mod region;
 mod scan;
 
 use process::{Process, ProcessView};
-use scan::{Region, Scan, Scannable};
+use region::Region;
+use scan::{Scan, Scannable};
 use std::sync::Mutex;
 use winapi::um::winnt;
 
