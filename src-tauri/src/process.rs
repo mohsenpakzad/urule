@@ -228,3 +228,14 @@ impl fmt::Display for ProcessItem {
         write!(f, "{} (pid={})", self.name, self.pid)
     }
 }
+
+impl TryFrom<&Process> for ProcessItem {
+    type Error = io::Error;
+
+    fn try_from(value: &Process) -> Result<Self, Self::Error> {
+        value.name().map(|name| ProcessItem {
+            pid: value.pid,
+            name,
+        })
+    }
+}

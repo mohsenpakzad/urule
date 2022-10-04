@@ -45,8 +45,15 @@ fn main() {
 }
 
 #[tauri::command]
-fn get_opened_process(state: tauri::State<AppState>) -> Option<Process> {
-    state.opened_process.lock().unwrap().clone()
+fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessItem> {
+    state
+        .opened_process
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .try_into()
+        .ok()
 }
 
 #[tauri::command]
