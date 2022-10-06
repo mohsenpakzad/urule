@@ -9,7 +9,6 @@ mod scan;
 
 use process::{Process, ProcessView};
 use region::Region;
-use scan::{Scan, Scannable};
 use std::sync::Mutex;
 use winapi::um::winnt;
 
@@ -112,7 +111,7 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
         .collect::<Vec<_>>();
 
     println!("Scanning {} memory regions", regions.len());
-    let scan = scan_str.parse::<Scan<Box<dyn Scannable>>>().unwrap();
+    let scan = scan_str.parse().unwrap();
     let last_scan = process.scan_regions(&regions, scan);
     println!(
         "Found {} locations",
@@ -124,7 +123,7 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
 
 #[tauri::command]
 fn next_scan(scan_str: String, state: tauri::State<AppState>) {
-    let scan = scan_str.parse::<Scan<Box<dyn Scannable>>>().unwrap();
+    let scan = scan_str.parse().unwrap();
     let last_scan = state
         .opened_process
         .lock()

@@ -1,5 +1,5 @@
 use crate::region::Region;
-use crate::scan::{Scan, Scannable};
+use crate::scan::Scan;
 use serde::Serialize;
 use std::mem::{self, MaybeUninit};
 use std::os::windows::io::{HandleOrNull, NullHandleError, OwnedHandle};
@@ -176,11 +176,7 @@ impl Process {
         }
     }
 
-    pub fn scan_regions<T: Scannable>(
-        &self,
-        regions: &[MEMORY_BASIC_INFORMATION],
-        scan: Scan<T>,
-    ) -> Vec<Region> {
+    pub fn scan_regions(&self, regions: &[MEMORY_BASIC_INFORMATION], scan: Scan) -> Vec<Region> {
         regions
             .iter()
             .flat_map(
@@ -198,7 +194,7 @@ impl Process {
             .collect()
     }
 
-    pub fn rescan_regions<T: Scannable>(&self, regions: &[Region], scan: Scan<T>) -> Vec<Region> {
+    pub fn rescan_regions(&self, regions: &[Region], scan: Scan) -> Vec<Region> {
         regions
             .iter()
             .flat_map(|region| {

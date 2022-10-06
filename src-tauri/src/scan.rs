@@ -1,242 +1,55 @@
 use crate::region::{CandidateLocations, Region, Value};
-use std::cmp::Ordering;
-use std::fmt;
-use std::mem;
 use std::str::FromStr;
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
-
-/// Represents the scan mode according associated to a certain type.
-#[derive(Clone)]
-pub struct ScanMode {
-    /// Returns `true` if the current instance is considered equal to the given chunk of memory.
-    ///
-    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
-    /// the length represented by `Self`.
-    eq: unsafe fn(left: &[u8], right: &[u8]) -> bool,
-
-    /// Compares `self` to the given chunk of memory.
-    ///
-    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
-    /// the length represented by `Self`.
-    cmp: unsafe fn(left: &[u8], right: &[u8]) -> Ordering,
-
-    /// Substracts the given chunk of memory from `self`.
-    ///
-    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
-    /// the length represented by `Self`.
-    sub: unsafe fn(left: &mut [u8], right: &[u8]),
-
-    /// Substracts `self` from the given chunk of memory.
-    ///
-    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
-    /// the length represented by `Self`.
-    rsub: unsafe fn(left: &mut [u8], right: &[u8]),
-}
-
-impl fmt::Debug for ScanMode {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("ScanMode")
-            .field("eq", &(self.eq as *const ()))
-            .field("cmp", &(self.cmp as *const ()))
-            .field("sub", &(self.sub as *const ()))
-            .field("rsub", &(self.rsub as *const ()))
-            .finish()
-    }
-}
-
-impl PartialEq for ScanMode {
-    fn eq(&self, other: &ScanMode) -> bool {
-        (self.eq as *const ()) == (other.eq as *const ())
-            && (self.cmp as *const ()) == (other.cmp as *const ())
-            && (self.sub as *const ()) == (other.sub as *const ())
-            && (self.rsub as *const ()) == (other.rsub as *const ())
-    }
-}
-
-impl Eq for ScanMode {}
-
-pub unsafe trait Scannable: fmt::Debug {
-    /// Return the memory view corresponding to this value.
-    ///
-    /// The returned length should always be the same for the same `self`.
-    fn mem_view(&self) -> &[u8];
-
-    /// The `ScanMode` used by this `Scannable`.
-    ///
-    /// For a given `T: Scannable`, `T.mem_view().len()` must be equal to the length expected
-    /// by this `ScanMode`.
-    fn scan_mode(&self) -> ScanMode;
-}
-
-impl PartialEq for dyn Scannable {
-    fn eq(&self, other: &dyn Scannable) -> bool {
-        self.mem_view() == other.mem_view() && self.scan_mode() == other.scan_mode()
-    }
-}
 
 /// A scan type.
 ///
 /// The variant determines how a memory scan should be performed.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Scan<T: Scannable> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scan {
     /// Perform an exact memory scan.
     /// Only memory locations containing this exact value will be considered.
-    Exact(T),
+    Exact(i32),
     /// The value is unknown.
     /// Every memory location is considered valid. This only makes sense for a first scan.
-    Unknown(usize, ScanMode),
+    Unknown,
     /// The value is contained within a given range.
-    InRange(T, T),
+    InRange(i32, i32),
     /// The value has not changed since the last scan.
     /// This only makes sense for subsequent scans.
-    Unchanged(usize, ScanMode),
+    Unchanged,
     /// The value has changed since the last scan.
     /// This only makes sense for subsequent scans.
-    Changed(usize, ScanMode),
+    Changed,
     /// The value has decreased by some unknown amount since the last scan.
     /// This only makes sense for subsequent scans.
-    Decreased(usize, ScanMode),
+    Decreased,
     /// The value has increased by some unknown amount since the last scan.
     /// This only makes sense for subsequent scans.
-    Increased(usize, ScanMode),
+    Increased,
     /// The value has decreased by the given amount since the last scan.
     /// This only makes sense for subsequent scans.
-    DecreasedBy(T),
+    DecreasedBy(i32),
     /// The value has increased by the given amount since the last scan.
     /// This only makes sense for subsequent scans.
-    IncreasedBy(T),
+    IncreasedBy(i32),
 }
 
-macro_rules! impl_scannable_for_int {
-    ( $( $ty:ty ),* ) => {
-        $(
-            // SAFETY: output `slice::len` matches `mem::size_of::<Self>()`.
-            unsafe impl Scannable for $ty {
-                fn mem_view(&self) -> &[u8] {
-                    unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, mem::size_of::<$ty>()) }
-                }
-
-                #[allow(unused_unsafe)] // mind you, it is necessary
-                fn scan_mode(&self) -> ScanMode {
-                    unsafe fn eq(left: &[u8], right: &[u8]) -> bool {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let lhs = unsafe { left.as_ptr().cast::<$ty>().read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        lhs == rhs
-                    }
-
-                    unsafe fn cmp(left: &[u8], right: &[u8]) -> Ordering {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let lhs = unsafe { left.as_ptr().cast::<$ty>().read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        Ord::cmp(&lhs, &rhs)
-                    }
-
-                    unsafe fn sub(left: &mut [u8], right: &[u8]) {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let left = left.as_mut_ptr().cast::<$ty>();
-                        let lhs = unsafe { left.read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        unsafe { left.write_unaligned(lhs.wrapping_sub(rhs)) }
-                    }
-
-                    unsafe fn rsub(left: &mut [u8], right: &[u8]) {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let left = left.as_mut_ptr().cast::<$ty>();
-                        let lhs = unsafe { left.read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        unsafe { left.write_unaligned(rhs.wrapping_sub(lhs)) }
-                    }
-
-                    ScanMode { eq, cmp, sub, rsub }
-                }
-            }
-        )*
-    };
-}
-
-macro_rules! impl_scannable_for_float {
-    ( $( $ty:ty : $int_ty:ty ),* ) => {
-        $(
-            // SAFETY: output `slice::len` matches `mem::size_of::<Self>()`.
-            unsafe impl Scannable for $ty {
-                fn mem_view(&self) -> &[u8] {
-                    unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, mem::size_of::<$ty>()) }
-                }
-
-                #[allow(unused_unsafe)] // mind you, it is necessary
-                fn scan_mode(&self) -> ScanMode {
-                    unsafe fn eq(left: &[u8], right: &[u8]) -> bool {
-                        const MASK: $int_ty = !((1 << (<$ty>::MANTISSA_DIGITS / 2)) - 1);
-
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let lhs = unsafe { left.as_ptr().cast::<$ty>().read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        let lhs = <$ty>::from_bits(lhs.to_bits() & MASK);
-                        let rhs = <$ty>::from_bits(rhs.to_bits() & MASK);
-                        lhs == rhs
-                    }
-
-                    unsafe fn cmp(left: &[u8], right: &[u8]) -> Ordering {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let lhs = unsafe { left.as_ptr().cast::<$ty>().read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        // FIXME: https://github.com/rust-lang/rust/issues/72599
-                        lhs.partial_cmp(&rhs).unwrap_or(Ordering::Less)
-                    }
-
-                    unsafe fn sub(left: &mut [u8], right: &[u8]) {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let left = left.as_mut_ptr().cast::<$ty>();
-                        let lhs = unsafe { left.read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        unsafe { left.write_unaligned(lhs - rhs) }
-                    }
-
-                    unsafe fn rsub(left: &mut [u8], right: &[u8]) {
-                        // SAFETY: caller is responsible to uphold the invariants.
-                        let left = left.as_mut_ptr().cast::<$ty>();
-                        let lhs = unsafe { left.read_unaligned() };
-                        let rhs = unsafe { right.as_ptr().cast::<$ty>().read_unaligned() };
-                        unsafe { left.write_unaligned(rhs - lhs) }
-                    }
-
-                    ScanMode { eq, cmp, sub, rsub }
-                }
-            }
-        )*
-    };
-}
-
-impl_scannable_for_int!(i8, u8, i16, u16, i32, u32, i64, u64);
-impl_scannable_for_float!(f32: u32, f64: u64);
-
-unsafe impl<T: AsRef<dyn Scannable> + fmt::Debug> Scannable for T {
-    fn mem_view(&self) -> &[u8] {
-        self.as_ref().mem_view()
-    }
-
-    fn scan_mode(&self) -> ScanMode {
-        self.as_ref().scan_mode()
-    }
-}
-
-impl<T: Scannable> Scan<T> {
+impl Scan {
     /// Run the scan over the memory corresponding to the given region information.
     ///
     /// Returns a scanned region with all the results found.
     pub fn run(&self, info: MEMORY_BASIC_INFORMATION, memory: Vec<u8>) -> Region {
         let base = info.BaseAddress as usize;
-        match self {
-            Scan::Exact(target) => {
-                let (target, mode) = (target.mem_view(), target.scan_mode());
+        match *self {
+            Scan::Exact(n) => {
+                let target = n.to_ne_bytes();
                 let locations = memory
                     .windows(target.len())
                     .enumerate()
-                    .step_by(target.len())
+                    .step_by(4)
                     .flat_map(|(offset, window)| {
-                        // SAFETY: `window.len() == Scannable::size(target)`.
-                        if unsafe { (mode.eq)(target, window) } {
+                        if window == target {
                             Some(base + offset)
                         } else {
                             None
@@ -246,23 +59,17 @@ impl<T: Scannable> Scan<T> {
                 Region {
                     info,
                     locations: CandidateLocations::Discrete { locations },
-                    value: Value::Exact(target.to_vec()),
+                    value: Value::Exact(n),
                 }
             }
             Scan::InRange(low, high) => {
-                let mode = low.scan_mode();
-                let (low, high) = (low.mem_view(), high.mem_view());
-                assert_eq!(low.len(), high.len());
                 let locations = memory
-                    .windows(low.len())
+                    .windows(4)
                     .enumerate()
-                    .step_by(low.len())
+                    .step_by(4)
                     .flat_map(|(offset, window)| {
-                        // SAFETY: `window.len() == Scannable::size(target)`.
-                        if unsafe {
-                            (mode.cmp)(low, window) != Ordering::Greater
-                                && (mode.cmp)(high, window) != Ordering::Less
-                        } {
+                        let n = i32::from_ne_bytes([window[0], window[1], window[2], window[3]]);
+                        if low <= n && n <= high {
                             Some(base + offset)
                         } else {
                             None
@@ -272,39 +79,22 @@ impl<T: Scannable> Scan<T> {
                 Region {
                     info,
                     locations: CandidateLocations::Discrete { locations },
-                    value: Value::AnyWithin {
-                        memory,
-                        size: low.len(),
-                    },
+                    value: Value::AnyWithin(memory),
                 }
             }
             // For scans that make no sense on a first run, treat them as unknown.
-            Scan::Unknown(size, _)
-            | Scan::Unchanged(size, _)
-            | Scan::Changed(size, _)
-            | Scan::Decreased(size, _)
-            | Scan::Increased(size, _) => Region {
+            Scan::Unknown
+            | Scan::Unchanged
+            | Scan::Changed
+            | Scan::Decreased
+            | Scan::Increased
+            | Scan::DecreasedBy(_)
+            | Scan::IncreasedBy(_) => Region {
                 info,
                 locations: CandidateLocations::Dense {
                     range: base..base + info.RegionSize,
-                    step: *size,
                 },
-                value: Value::AnyWithin {
-                    memory,
-                    size: *size,
-                },
-            },
-
-            Scan::DecreasedBy(value) | Scan::IncreasedBy(value) => Region {
-                info,
-                locations: CandidateLocations::Dense {
-                    range: base..base + info.RegionSize,
-                    step: value.mem_view().len(),
-                },
-                value: Value::AnyWithin {
-                    memory,
-                    size: value.mem_view().len(),
-                },
+                value: Value::AnyWithin(memory),
             },
         }
     }
@@ -313,43 +103,35 @@ impl<T: Scannable> Scan<T> {
     ///
     /// Returns the new scanned region with all the results found.
     pub fn rerun(&self, region: &Region, memory: Vec<u8>) -> Region {
-        let size = match self {
+        match self {
             // Optimization: unknown scan won't narrow down the region at all.
-            Scan::Unknown(_, _) => return region.clone(),
-            Scan::Exact(value) => value.mem_view().len(),
-            Scan::InRange(low, high) => {
-                assert_eq!(low.mem_view().len(), high.mem_view().len());
-                low.mem_view().len()
+            Scan::Unknown => region.clone(),
+            _ => {
+                let mut locations = CandidateLocations::Discrete {
+                    locations: region
+                        .locations
+                        .iter()
+                        .flat_map(|addr| {
+                            let old = region.value_at(addr);
+                            let base = addr - region.info.BaseAddress as usize;
+                            let bytes = &memory[base..base + 4];
+                            let new = i32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                            if self.acceptable(old, new) {
+                                Some(addr)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                };
+                locations.try_compact();
+
+                Region {
+                    info: region.info.clone(),
+                    locations,
+                    value: Value::AnyWithin(memory),
+                }
             }
-            Scan::Unchanged(size, _)
-            | Scan::Changed(size, _)
-            | Scan::Decreased(size, _)
-            | Scan::Increased(size, _) => *size,
-            Scan::DecreasedBy(value) | Scan::IncreasedBy(value) => value.mem_view().len(),
-        };
-
-        let locations = CandidateLocations::Discrete {
-            locations: region
-                .locations
-                .iter()
-                .flat_map(|addr| {
-                    let old = region.value_at(addr);
-                    let base = addr - region.info.BaseAddress as usize;
-                    let bytes = &memory[base..base + size];
-                    // SAFETY: `bytes.len() == size`.
-                    if unsafe { self.acceptable(old, bytes) } {
-                        Some(addr)
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-        };
-
-        Region {
-            info: region.info.clone(),
-            locations,
-            value: Value::AnyWithin { memory, size },
         }
     }
 
@@ -362,130 +144,39 @@ impl<T: Scannable> Scan<T> {
     /// let scan = Scan::Increased;
     /// assert!(scan.acceptable(5, 7));
     /// ```
-    ///
-    /// # Safety
-    ///
-    /// Caller must `assert_eq!(new.len(), mem::size_of::<T>())`.
-    unsafe fn acceptable(&self, old: &[u8], new: &[u8]) -> bool {
-        match self {
-            Scan::Exact(value) => (value.scan_mode().eq)(value.mem_view(), new),
-            Scan::Unknown(_, _) => true,
-            Scan::InRange(low, high) => {
-                let mode = low.scan_mode();
-                let (low, high) = (low.mem_view(), high.mem_view());
-                (mode.cmp)(low, new) != Ordering::Greater && (mode.cmp)(high, new) != Ordering::Less
-            }
-            Scan::Unchanged(_, mode) => (mode.eq)(old, new),
-            Scan::Changed(_, mode) => !(mode.eq)(old, new),
-            Scan::Decreased(_, mode) => (mode.cmp)(old, new) == Ordering::Greater,
-            Scan::Increased(_, mode) => (mode.cmp)(old, new) == Ordering::Less,
-            Scan::DecreasedBy(value) => {
-                let mode = value.scan_mode();
-                let mut delta = old.to_vec();
-                (mode.sub)(delta.as_mut(), new);
-                (mode.eq)(value.mem_view(), delta.as_ref())
-            }
-            Scan::IncreasedBy(value) => {
-                let mode = value.scan_mode();
-                let mut delta = old.to_vec();
-                (mode.rsub)(delta.as_mut(), new);
-                (mode.eq)(value.mem_view(), delta.as_ref())
-            }
+    fn acceptable(&self, old: i32, new: i32) -> bool {
+        match *self {
+            Scan::Exact(n) => new == n,
+            Scan::Unknown => true,
+            Scan::InRange(low, high) => low <= new && new <= high,
+            Scan::Unchanged => new == old,
+            Scan::Changed => new != old,
+            Scan::Decreased => new < old,
+            Scan::Increased => new > old,
+            Scan::DecreasedBy(n) => old.wrapping_sub(new) == n,
+            Scan::IncreasedBy(n) => new.wrapping_sub(old) == n,
         }
     }
 }
 
-impl FromStr for Scan<Box<dyn Scannable>> {
-    type Err = ();
+impl FromStr for Scan {
+    type Err = std::num::ParseIntError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        enum Ty {
-            I8,
-            U8,
-            I16,
-            U16,
-            I32,
-            U32,
-            I64,
-            U64,
-            F32,
-            F64,
-        }
-
-        impl FromStr for Ty {
-            type Err = ();
-
-            fn from_str(value: &str) -> Result<Self, Self::Err> {
-                Ok(match value {
-                    "i8" | "I8" => Ty::I8,
-                    "u8" | "U8" => Ty::U8,
-                    "i16" | "I16" => Ty::I16,
-                    "u16" | "U16" => Ty::U16,
-                    "i32" | "I32" => Ty::I32,
-                    "u32" | "U32" => Ty::U32,
-                    "i64" | "I64" => Ty::I64,
-                    "u64" | "U64" => Ty::U64,
-                    "f32" | "F32" => Ty::F32,
-                    "f64" | "F64" => Ty::F64,
-                    _ => return Err(()),
-                })
-            }
-        }
-
-        impl Ty {
-            fn parse(&self, value: &str) -> Result<Box<dyn Scannable>, ()> {
-                Ok(match self {
-                    Ty::I8 => Box::new(value.parse::<i8>().map_err(drop)?),
-                    Ty::U8 => Box::new(value.parse::<u8>().map_err(drop)?),
-                    Ty::I16 => Box::new(value.parse::<i16>().map_err(drop)?),
-                    Ty::U16 => Box::new(value.parse::<u16>().map_err(drop)?),
-                    Ty::I32 => Box::new(value.parse::<i32>().map_err(drop)?),
-                    Ty::U32 => Box::new(value.parse::<u32>().map_err(drop)?),
-                    Ty::I64 => Box::new(value.parse::<i64>().map_err(drop)?),
-                    Ty::U64 => Box::new(value.parse::<u64>().map_err(drop)?),
-                    Ty::F32 => Box::new(value.parse::<f32>().map_err(drop)?),
-                    Ty::F64 => Box::new(value.parse::<f64>().map_err(drop)?),
-                })
-            }
-
-            fn size(&self) -> usize {
-                match self {
-                    Ty::I8 | Ty::U8 => 1,
-                    Ty::I16 | Ty::U16 => 2,
-                    Ty::I32 | Ty::U32 | Ty::F32 => 4,
-                    Ty::I64 | Ty::U64 | Ty::F64 => 8,
-                }
-            }
-
-            fn default(&self) -> Box<dyn Scannable> {
-                self.parse("0").unwrap()
-            }
-        }
-
-        let (value, ty) = if let Ok(ty) = value[value.len().saturating_sub(2)..].parse() {
-            (value[..value.len() - 2].trim(), ty)
-        } else if let Ok(ty) = value[value.len().saturating_sub(3)..].parse() {
-            (value[..value.len() - 3].trim(), ty)
-        } else {
-            (value, Ty::I32)
-        };
-
-        let size = ty.size();
-        let mode = ty.default().scan_mode();
         Ok(match value.as_bytes()[0] {
-            b'u' => Scan::Unknown(size, mode),
-            b'=' => Scan::Unchanged(size, mode),
-            b'~' => Scan::Changed(size, mode),
+            b'u' => Scan::Unknown,
+            b'=' => Scan::Unchanged,
+            b'~' => Scan::Changed,
             t @ b'd' | t @ b'i' => {
                 let n = value[1..].trim();
                 if n.is_empty() {
                     if t == b'd' {
-                        Scan::Decreased(size, mode)
+                        Scan::Decreased
                     } else {
-                        Scan::Increased(size, mode)
+                        Scan::Increased
                     }
                 } else {
-                    let n = ty.parse(n)?;
+                    let n = n.parse()?;
                     if t == b'd' {
                         Scan::DecreasedBy(n)
                     } else {
@@ -495,18 +186,18 @@ impl FromStr for Scan<Box<dyn Scannable>> {
             }
             _ => {
                 let (low, high) = if let Some(i) = value.find("..=") {
-                    (ty.parse(&value[..i])?, ty.parse(&value[i + 3..])?)
+                    (value[..i].parse()?, value[i + 3..].parse()?)
                 } else if let Some(i) = value.find("..") {
-                    // FIXME subtract unit 1 or create exclusive range
-                    (ty.parse(&value[..i])?, ty.parse(&value[i + 2..])?)
+                    (value[..i].parse()?, value[i + 2..].parse::<i32>()? - 1)
                 } else {
-                    (ty.parse(value)?, ty.parse(value)?)
+                    let n = value.parse()?;
+                    (n, n)
                 };
 
-                if &low == &high {
-                    Scan::Exact(Box::new(low))
+                if low == high {
+                    Scan::Exact(low)
                 } else {
-                    Scan::InRange(Box::new(low), Box::new(high))
+                    Scan::InRange(low, high)
                 }
             }
         })
@@ -519,59 +210,53 @@ mod scan_tests {
 
     #[test]
     fn exact() {
-        assert_eq!("42".parse(), Ok(Scan::Exact(Box::new(42) as _)));
-        assert_eq!("-42".parse(), Ok(Scan::Exact(Box::new(-42) as _)));
+        assert_eq!("42".parse(), Ok(Scan::Exact(42)));
+        assert_eq!("-42".parse(), Ok(Scan::Exact(-42)));
     }
 
     #[test]
     fn unknown() {
-        assert_eq!("u".parse(), Ok(Scan::Unknown(4, 0.scan_mode())));
+        assert_eq!("u".parse(), Ok(Scan::Unknown));
     }
 
     #[test]
     fn in_range() {
-        assert_eq!(
-            "12..34".parse(),
-            Ok(Scan::InRange(Box::new(12) as _, Box::new(33) as _))
-        );
-        assert_eq!(
-            "12..=34".parse(),
-            Ok(Scan::InRange(Box::new(12) as _, Box::new(34) as _))
-        );
+        assert_eq!("12..34".parse(), Ok(Scan::InRange(12, 33)));
+        assert_eq!("12..=34".parse(), Ok(Scan::InRange(12, 34)));
     }
 
     #[test]
     fn unchanged() {
-        assert_eq!("=".parse(), Ok(Scan::Unchanged(4, 0.scan_mode())));
+        assert_eq!("=".parse(), Ok(Scan::Unchanged));
     }
 
     #[test]
     fn changed() {
-        assert_eq!("~".parse(), Ok(Scan::Changed(4, 0.scan_mode())));
+        assert_eq!("~".parse(), Ok(Scan::Changed));
     }
 
     #[test]
     fn decreased() {
-        assert_eq!("d".parse(), Ok(Scan::Decreased(4, 0.scan_mode())));
+        assert_eq!("d".parse(), Ok(Scan::Decreased));
     }
 
     #[test]
     fn increased() {
-        assert_eq!("i".parse(), Ok(Scan::Increased(4, 0.scan_mode())));
+        assert_eq!("i".parse(), Ok(Scan::Increased));
     }
 
     #[test]
     fn decreased_by() {
-        assert_eq!("d42".parse(), Ok(Scan::DecreasedBy(Box::new(42) as _)));
-        assert_eq!("d 42".parse(), Ok(Scan::DecreasedBy(Box::new(42) as _)));
-        assert_eq!("d-42".parse(), Ok(Scan::DecreasedBy(Box::new(-42) as _)));
+        assert_eq!("d42".parse(), Ok(Scan::DecreasedBy(42)));
+        assert_eq!("d 42".parse(), Ok(Scan::DecreasedBy(42)));
+        assert_eq!("d-42".parse(), Ok(Scan::DecreasedBy(-42)));
     }
 
     #[test]
     fn increased_by() {
-        assert_eq!("i42".parse(), Ok(Scan::IncreasedBy(Box::new(42) as _)));
-        assert_eq!("i 42".parse(), Ok(Scan::IncreasedBy(Box::new(42) as _)));
-        assert_eq!("i-42".parse(), Ok(Scan::IncreasedBy(Box::new(-42) as _)));
+        assert_eq!("i42".parse(), Ok(Scan::IncreasedBy(42)));
+        assert_eq!("i 42".parse(), Ok(Scan::IncreasedBy(42)));
+        assert_eq!("i-42".parse(), Ok(Scan::IncreasedBy(-42)));
     }
 }
 
@@ -580,13 +265,82 @@ mod candidate_location_tests {
     use super::*;
 
     #[test]
-    fn f32_roughly_eq() {
-        let left = 0.25f32;
-        let lhs = unsafe { mem::transmute::<_, [u8; 4]>(left) };
-        let right = 0.25000123f32;
-        let rhs = unsafe { mem::transmute::<_, [u8; 4]>(right) };
-        assert_ne!(left, right);
-        assert!(unsafe { (0f32.scan_mode().eq)(&lhs, &rhs) });
+    fn compact_uncompactable() {
+        // Dense
+        let mut locations = CandidateLocations::Dense {
+            range: 0x2000..0x2100,
+        };
+        locations.try_compact();
+        assert!(matches!(locations, CandidateLocations::Dense { .. }));
+
+        // Already compacted
+        let mut locations = CandidateLocations::SmallDiscrete {
+            base: 0x2000,
+            offsets: vec![0, 0x20, 0x40],
+        };
+        locations.try_compact();
+        assert!(matches!(
+            locations,
+            CandidateLocations::SmallDiscrete { .. }
+        ));
+
+        let mut locations = CandidateLocations::Sparse {
+            base: 0x2000,
+            mask: vec![true, false, false, false],
+        };
+        locations.try_compact();
+        assert!(matches!(locations, CandidateLocations::Sparse { .. }));
+    }
+
+    #[test]
+    fn compact_not_worth() {
+        // Too small
+        let mut locations = CandidateLocations::Discrete {
+            locations: vec![0x2000],
+        };
+        let original = locations.clone();
+        locations.try_compact();
+        assert_eq!(locations, original);
+
+        // Too sparse and too large to fit in `SmallDiscrete`.
+        let mut locations = CandidateLocations::Discrete {
+            locations: vec![0x2000, 0x42000],
+        };
+        let original = locations.clone();
+        locations.try_compact();
+        assert_eq!(locations, original);
+    }
+
+    #[test]
+    fn compact_small_discrete() {
+        let mut locations = CandidateLocations::Discrete {
+            locations: vec![0x2000, 0x2004, 0x2040],
+        };
+        locations.try_compact();
+        assert_eq!(
+            locations,
+            CandidateLocations::SmallDiscrete {
+                base: 0x2000,
+                offsets: vec![0x0000, 0x0004, 0x0040],
+            }
+        );
+    }
+
+    #[test]
+    fn compact_sparse() {
+        let mut locations = CandidateLocations::Discrete {
+            locations: vec![
+                0x2000, 0x2004, 0x200c, 0x2010, 0x2014, 0x2018, 0x201c, 0x2020,
+            ],
+        };
+        locations.try_compact();
+        assert_eq!(
+            locations,
+            CandidateLocations::Sparse {
+                base: 0x2000,
+                mask: vec![true, true, false, true, true, true, true, true],
+            }
+        );
     }
 
     #[test]
@@ -601,14 +355,37 @@ mod candidate_location_tests {
     }
 
     #[test]
+    fn iter_small_discrete() {
+        let locations = CandidateLocations::SmallDiscrete {
+            base: 0x2000,
+            offsets: vec![0x0000, 0x0004, 0x000c],
+        };
+        assert_eq!(
+            locations.iter().collect::<Vec<_>>(),
+            vec![0x2000, 0x2004, 0x200c]
+        );
+    }
+
+    #[test]
     fn iter_dense() {
         let locations = CandidateLocations::Dense {
             range: 0x2000..0x2010,
-            step: 4,
         };
         assert_eq!(
             locations.iter().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x2008, 0x200c]
+        );
+    }
+
+    #[test]
+    fn iter_sparse() {
+        let locations = CandidateLocations::Sparse {
+            base: 0x2000,
+            mask: vec![true, true, false, true],
+        };
+        assert_eq!(
+            locations.iter().collect::<Vec<_>>(),
+            vec![0x2000, 0x2004, 0x200c]
         );
     }
 }
