@@ -58,7 +58,7 @@ impl Scan {
                     .collect();
                 Region {
                     info,
-                    locations: CandidateLocations::Discrete { locations },
+                    locations: CandidateLocations::SameValue { locations },
                     value: Value::Exact(n),
                 }
             }
@@ -78,7 +78,7 @@ impl Scan {
                     .collect();
                 Region {
                     info,
-                    locations: CandidateLocations::Discrete { locations },
+                    locations: CandidateLocations::SameValue { locations },
                     value: Value::AnyWithin(memory),
                 }
             }
@@ -91,7 +91,7 @@ impl Scan {
             | Scan::DecreasedBy(_)
             | Scan::IncreasedBy(_) => Region {
                 info,
-                locations: CandidateLocations::Dense {
+                locations: CandidateLocations::Range {
                     range: base..base + info.RegionSize,
                 },
                 value: Value::AnyWithin(memory),
@@ -107,7 +107,7 @@ impl Scan {
             // Optimization: unknown scan won't narrow down the region at all.
             Scan::Unknown => region.clone(),
             _ => {
-                let mut locations = CandidateLocations::Discrete {
+                let mut locations = CandidateLocations::SameValue {
                     locations: region
                         .locations
                         .iter()
@@ -266,44 +266,41 @@ mod candidate_location_tests {
 
     #[test]
     fn compact_uncompactable() {
-        // Dense
-        let mut locations = CandidateLocations::Dense {
+        // Range
+        let mut locations = CandidateLocations::Range {
             range: 0x2000..0x2100,
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::Dense { .. }));
+        assert!(matches!(locations, CandidateLocations::Range { .. }));
 
         // Already compacted
-        let mut locations = CandidateLocations::SmallDiscrete {
+        let mut locations = CandidateLocations::Offsetted {
             base: 0x2000,
             offsets: vec![0, 0x20, 0x40],
         };
         locations.try_compact();
-        assert!(matches!(
-            locations,
-            CandidateLocations::SmallDiscrete { .. }
-        ));
+        assert!(matches!(locations, CandidateLocations::Offsetted { .. }));
 
-        let mut locations = CandidateLocations::Sparse {
+        let mut locations = CandidateLocations::Masked {
             base: 0x2000,
             mask: vec![true, false, false, false],
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::Sparse { .. }));
+        assert!(matches!(locations, CandidateLocations::Masked { .. }));
     }
 
     #[test]
     fn compact_not_worth() {
         // Too small
-        let mut locations = CandidateLocations::Discrete {
+        let mut locations = CandidateLocations::SameValue {
             locations: vec![0x2000],
         };
         let original = locations.clone();
         locations.try_compact();
         assert_eq!(locations, original);
 
-        // Too sparse and too large to fit in `SmallDiscrete`.
-        let mut locations = CandidateLocations::Discrete {
+        // Too sparse and too large to fit in `Offsetted`.
+        let mut locations = CandidateLocations::SameValue {
             locations: vec![0x2000, 0x42000],
         };
         let original = locations.clone();
@@ -312,14 +309,14 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn compact_small_discrete() {
-        let mut locations = CandidateLocations::Discrete {
+    fn compact_offsetted() {
+        let mut locations = CandidateLocations::SameValue {
             locations: vec![0x2000, 0x2004, 0x2040],
         };
         locations.try_compact();
         assert_eq!(
             locations,
-            CandidateLocations::SmallDiscrete {
+            CandidateLocations::Offsetted {
                 base: 0x2000,
                 offsets: vec![0x0000, 0x0004, 0x0040],
             }
@@ -327,8 +324,8 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn compact_sparse() {
-        let mut locations = CandidateLocations::Discrete {
+    fn compact_masked() {
+        let mut locations = CandidateLocations::SameValue {
             locations: vec![
                 0x2000, 0x2004, 0x200c, 0x2010, 0x2014, 0x2018, 0x201c, 0x2020,
             ],
@@ -336,7 +333,7 @@ mod candidate_location_tests {
         locations.try_compact();
         assert_eq!(
             locations,
-            CandidateLocations::Sparse {
+            CandidateLocations::Masked {
                 base: 0x2000,
                 mask: vec![true, true, false, true, true, true, true, true],
             }
@@ -344,8 +341,8 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn iter_discrete() {
-        let locations = CandidateLocations::Discrete {
+    fn iter_same_value() {
+        let locations = CandidateLocations::SameValue {
             locations: vec![0x2000, 0x2004, 0x200c],
         };
         assert_eq!(
@@ -355,8 +352,8 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn iter_small_discrete() {
-        let locations = CandidateLocations::SmallDiscrete {
+    fn iter_offsetted() {
+        let locations = CandidateLocations::Offsetted {
             base: 0x2000,
             offsets: vec![0x0000, 0x0004, 0x000c],
         };
@@ -367,8 +364,8 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn iter_dense() {
-        let locations = CandidateLocations::Dense {
+    fn iter_same_value() {
+        let locations = CandidateLocations::Range {
             range: 0x2000..0x2010,
         };
         assert_eq!(
@@ -378,8 +375,8 @@ mod candidate_location_tests {
     }
 
     #[test]
-    fn iter_sparse() {
-        let locations = CandidateLocations::Sparse {
+    fn iter_masked() {
+        let locations = CandidateLocations::Masked {
             base: 0x2000,
             mask: vec![true, true, false, true],
         };

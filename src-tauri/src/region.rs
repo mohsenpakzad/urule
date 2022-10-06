@@ -32,35 +32,35 @@ impl Region {
 /// Candidate memory locations for holding our desired value.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum CandidateLocations {
-    /// Multiple, separated locations.
+    /// A same value locations.
     ///
     /// It is a logic error to have the locations in non-ascending order.
-    Discrete { locations: Vec<usize> },
-    /// Like `Discrete`, but uses less memory.
+    SameValue { locations: Vec<usize> },
+    /// A Offsetted memory location. It uses steps to represent addresses.
     // TODO this could also assume 4-byte aligned so we'd gain 2 bits for offsets.
-    SmallDiscrete { base: usize, offsets: Vec<u16> },
-    /// A dense memory location. Everything within here should be considered.
-    Dense { range: Range<usize> },
-    /// A sparse memory location. Pretty much like `Dense`, but only items within the mask apply.
+    Offsetted { base: usize, offsets: Vec<u16> },
+    /// A masked memory location. Only items within the mask apply.
     /// The mask assumes 4-byte aligned data  (so one byte for every 4).
-    Sparse { base: usize, mask: Vec<bool> },
+    Masked { base: usize, mask: Vec<bool> },
+    /// A range of memory locations. Everything within here should be considered.
+    Range { range: Range<usize> },
 }
 
 impl CandidateLocations {
     /// Return the amount of candidate locations.
     pub fn len(&self) -> usize {
         match self {
-            CandidateLocations::Discrete { locations } => locations.len(),
-            CandidateLocations::SmallDiscrete { offsets, .. } => offsets.len(),
-            CandidateLocations::Dense { range } => range.len(),
-            CandidateLocations::Sparse { mask, .. } => mask.iter().filter(|x| **x).count(),
+            CandidateLocations::SameValue { locations } => locations.len(),
+            CandidateLocations::Offsetted { offsets, .. } => offsets.len(),
+            CandidateLocations::Range { range } => range.len(),
+            CandidateLocations::Masked { mask, .. } => mask.iter().filter(|x| **x).count(),
         }
     }
 
     /// Tries to compact the candidate locations into a more efficient representation.
     pub fn try_compact(&mut self) {
         let locations = match self {
-            CandidateLocations::Discrete { locations } if locations.len() >= 2 => {
+            CandidateLocations::SameValue { locations } if locations.len() >= 2 => {
                 mem::take(locations)
             }
             _ => return,
@@ -76,7 +76,7 @@ impl CandidateLocations {
         if size <= u16::MAX as _ && locations.len() * mem::size_of::<u16>() < size / 4 {
             // We will always store a `0` offset, but that's fine, it makes iteration easier and
             // getting rid of it would only gain usu 2 bytes.
-            *self = CandidateLocations::SmallDiscrete {
+            *self = CandidateLocations::Offsetted {
                 base: low,
                 offsets: locations
                     .into_iter()
@@ -92,7 +92,7 @@ impl CandidateLocations {
 
             let mut locations = locations.into_iter();
             let mut next_set = locations.next();
-            *self = CandidateLocations::Sparse {
+            *self = CandidateLocations::Masked {
                 base: low,
                 mask: (low..high)
                     .step_by(4)
@@ -111,18 +111,18 @@ impl CandidateLocations {
 
         // Neither of the attempts is really better than just storing the locations.
         // Revert to using a discrete representation.
-        *self = CandidateLocations::Discrete { locations };
+        *self = CandidateLocations::SameValue { locations };
     }
 
     /// Return a iterator over the locations.
     pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = usize> + 'a> {
         match self {
-            CandidateLocations::Discrete { locations } => Box::new(locations.iter().copied()),
-            CandidateLocations::SmallDiscrete { base, offsets } => {
+            CandidateLocations::SameValue { locations } => Box::new(locations.iter().copied()),
+            CandidateLocations::Offsetted { base, offsets } => {
                 Box::new(offsets.iter().map(move |&offset| base + offset as usize))
             }
-            CandidateLocations::Dense { range } => Box::new(range.clone().step_by(4)),
-            CandidateLocations::Sparse { base, mask } => Box::new(
+            CandidateLocations::Range { range } => Box::new(range.clone().step_by(4)),
+            CandidateLocations::Masked { base, mask } => Box::new(
                 mask.iter()
                     .enumerate()
                     .filter(|(_, &set)| set)
