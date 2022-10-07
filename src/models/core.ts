@@ -7,22 +7,15 @@ export interface Process {
   pid: number;
   name: string;
 }
-
 export interface CandidateLocations {
-  Discrete?: { locations: number[] };
-  SmallDiscrete?: { base: number; offsets: number[] };
-  Dense?: { range: Range; step: number };
-  Sparse?: { base: number; mask: boolean[]; scale: number };
+  KeyValue?: Record<number, number>;
+  SameValue?: { locations: number[]; value: number };
+  Range?: { range: Range; values: number[] };
+  Offsetted?: { base: number; offsets: number[]; values: number[] };
+  Masked?: { base: number; mask: boolean[]; values: number[] };
 }
-
-export interface Value {
-  Exact?: number[];
-  AnyWithin?: { memory: number[]; size: number };
-}
-
 export interface Region {
   locations: CandidateLocations;
-  value: Value;
 }
 
 export interface Address {
