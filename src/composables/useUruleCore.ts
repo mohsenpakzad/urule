@@ -9,7 +9,7 @@ export function useUruleCore() {
   async function writeOpenedProcessMemory(address: number, value: number) {
     return await invoke<number | null>('write_opened_process_memory', {
       address,
-      value: longToByteArray(value),
+      value,
     });
   }
 

@@ -156,7 +156,7 @@ impl Process {
         }
     }
 
-    pub fn write_memory(&self, addr: usize, value: &[u8]) -> io::Result<usize> {
+    pub fn write_memory<T>(&self, addr: usize, value: &T) -> io::Result<usize> {
         let mut written = 0;
 
         // SAFETY: the input value buffer points to valid memory.
@@ -164,8 +164,8 @@ impl Process {
             winapi::um::memoryapi::WriteProcessMemory(
                 self.handle.as_raw_handle(),
                 addr as *mut _,
-                value.as_ptr().cast(),
-                value.len(),
+                (value as *const T).cast(),
+                mem::size_of::<T>(),
                 &mut written,
             )
         } == FALSE

@@ -60,7 +60,7 @@ fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessView> {
 #[tauri::command]
 fn write_opened_process_memory(
     address: usize,
-    value: Vec<u8>,
+    value: i32,
     state: tauri::State<AppState>,
 ) -> Option<usize> {
     state
