@@ -191,6 +191,7 @@ impl Process {
                     }
                 },
             )
+            .filter(|region| region.locations.len() > 0)
             .collect()
     }
 
@@ -209,6 +210,7 @@ impl Process {
                     }
                 }
             })
+            .filter(|region| region.locations.len() > 0)
             .collect()
     }
 }
