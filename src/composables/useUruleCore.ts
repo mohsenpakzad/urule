@@ -34,17 +34,24 @@ export function useUruleCore() {
   }
 
   function convertRegionsToAddresses(lastScanRegions: Region[]) {
-    return lastScanRegions.flatMap(region => {
+    return lastScanRegions.flatMap((region) => {
+      console.log(region.locations);
 
-      if (region.locations.Discrete && region.value.Exact) {
-        const locations = region.locations.Discrete.locations;
-        const value = byteArrayToLong(region.value.Exact)
+      if (region.locations.SameValue) {
+        const locations = region.locations.SameValue.locations;
+        const value = region.locations.SameValue.value;
 
-        return locations.map(location => <Address>{pointer: location, value})
+        return locations.map(
+          (location) => <Address>{ pointer: location, value }
+        );
+      } else if (region.locations.KeyValue) {
+        return Object.entries(region.locations.KeyValue).map(
+          ([pointer, value]) => <Address>{ pointer: parseInt(pointer), value }
+        );
       }
       // TODO: handle other cases
-      return []
-    })
+      return [];
+    });
   }
 
   // TODO: clean this code
