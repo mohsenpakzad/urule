@@ -1,5 +1,5 @@
 use crate::region::{CandidateLocations, Region};
-use std::str::FromStr;
+use std::{borrow::Borrow, str::FromStr};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
 
 /// A scan type.
@@ -68,8 +68,7 @@ impl Scan {
                         .enumerate()
                         .step_by(4)
                         .flat_map(|(offset, window)| {
-                            let n =
-                                i32::from_ne_bytes([window[0], window[1], window[2], window[3]]);
+                            let n = i32::from_ne_bytes(window.try_into().unwrap());
                             if low <= n && n <= high {
                                 Some((base + offset, n))
                             } else {
@@ -96,7 +95,7 @@ impl Scan {
                     values: memory
                         .windows(4)
                         .step_by(4)
-                        .map(|value| i32::from_ne_bytes([value[0], value[1], value[2], value[3]]))
+                        .map(|value| i32::from_ne_bytes(value.try_into().unwrap()))
                         .collect(),
                 },
             },
@@ -117,8 +116,9 @@ impl Scan {
                         .iter()
                         .flat_map(|addr| {
                             let base = addr - region.info.BaseAddress as usize;
-                            let bytes = &memory[base..base + 4];
-                            let new = i32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                            let new = i32::from_ne_bytes(
+                                memory[base..base + 4].borrow().try_into().unwrap(),
+                            );
                             if new == value {
                                 Some(addr)
                             } else {
@@ -141,8 +141,9 @@ impl Scan {
                         .flat_map(|addr| {
                             let old = region.value_at(addr);
                             let base = addr - region.info.BaseAddress as usize;
-                            let bytes = &memory[base..base + 4];
-                            let new = i32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                            let new = i32::from_ne_bytes(
+                                memory[base..base + 4].borrow().try_into().unwrap(),
+                            );
                             println!("Old: {}, new: {}", old, new);
                             if self.acceptable(old, new) {
                                 Some((addr, new))
