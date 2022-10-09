@@ -8,6 +8,7 @@ mod region;
 mod scan;
 
 use crate::scan::Scan;
+use paste::paste;
 use process::{Process, ProcessView};
 use region::Region;
 use std::sync::Mutex;
@@ -74,67 +75,75 @@ fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessView> {
         .ok()
 }
 
-#[tauri::command]
-fn write_opened_process_memory(
-    address: usize,
-    value: i32,
-    state: tauri::State<AppState>,
-) -> Option<usize> {
-    state
-        .opened_process
-        .lock()
-        .unwrap()
-        .as_ref()
-        .unwrap()
-        .write_memory(address, &value)
-        .ok()
+macro_rules! impl_scan {
+    ( $( $type:ty : $type_size:expr ),+ ) => {
+        $(paste! {
+            #[tauri::command]
+            fn write_opened_process_memory(
+                address: usize,
+                value: $type,
+                state: tauri::State<AppState>,
+            ) -> Option<usize> {
+                state
+                    .opened_process
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .write_memory(address, &value)
+                    .ok()
+            }
+
+            #[tauri::command]
+            fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region<$type_size, $type>> {
+                state.last_scan.lock().unwrap().clone()
+            }
+
+            #[tauri::command]
+            fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
+                let process = Process::open(pid).unwrap();
+                println!("Opened process {:?}", process);
+
+                const MASK: u32 = winnt::PAGE_EXECUTE_READWRITE
+                    | winnt::PAGE_EXECUTE_WRITECOPY
+                    | winnt::PAGE_READWRITE
+                    | winnt::PAGE_WRITECOPY;
+
+                let regions = process
+                    .memory_regions()
+                    .into_iter()
+                    .filter(|p| (p.Protect & MASK) != 0)
+                    .collect::<Vec<_>>();
+
+                println!("Scanning {} memory regions", regions.len());
+                let scan = Scan::<$type_size, $type>::Exact(scan_str.parse().unwrap());
+                let last_scan = process.scan_regions(&regions, scan);
+                println!(
+                    "Found {} locations",
+                    last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
+                );
+                *state.opened_process.lock().unwrap() = Some(process);
+                *state.last_scan.lock().unwrap() = last_scan;
+            }
+
+            #[tauri::command]
+            fn next_scan(scan_str: String, state: tauri::State<AppState>) {
+                let scan = Scan::<$type_size, $type>::Exact(scan_str.parse().unwrap());
+                let last_scan = state
+                    .opened_process
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .rescan_regions(&state.last_scan.lock().unwrap(), scan);
+                println!(
+                    "Now have {} locations",
+                    last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
+                );
+                *state.last_scan.lock().unwrap() = last_scan;
+            }
+        })*
+    }
 }
 
-#[tauri::command]
-fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region<4, i32>> {
-    state.last_scan.lock().unwrap().clone()
-}
-
-#[tauri::command]
-fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
-    let process = Process::open(pid).unwrap();
-    println!("Opened process {:?}", process);
-
-    const MASK: u32 = winnt::PAGE_EXECUTE_READWRITE
-        | winnt::PAGE_EXECUTE_WRITECOPY
-        | winnt::PAGE_READWRITE
-        | winnt::PAGE_WRITECOPY;
-
-    let regions = process
-        .memory_regions()
-        .into_iter()
-        .filter(|p| (p.Protect & MASK) != 0)
-        .collect::<Vec<_>>();
-
-    println!("Scanning {} memory regions", regions.len());
-    let scan = Scan::<4, i32>::Exact(scan_str.parse().unwrap());
-    let last_scan = process.scan_regions(&regions, scan);
-    println!(
-        "Found {} locations",
-        last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
-    );
-    *state.opened_process.lock().unwrap() = Some(process);
-    *state.last_scan.lock().unwrap() = last_scan;
-}
-
-#[tauri::command]
-fn next_scan(scan_str: String, state: tauri::State<AppState>) {
-    let scan = Scan::<4, i32>::Exact(scan_str.parse().unwrap());
-    let last_scan = state
-        .opened_process
-        .lock()
-        .unwrap()
-        .as_ref()
-        .unwrap()
-        .rescan_regions(&state.last_scan.lock().unwrap(), scan);
-    println!(
-        "Now have {} locations",
-        last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
-    );
-    *state.last_scan.lock().unwrap() = last_scan;
-}
+impl_scan!(i32: 4);
