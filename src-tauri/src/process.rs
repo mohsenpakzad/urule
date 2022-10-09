@@ -1,5 +1,5 @@
 use crate::region::Region;
-use crate::scan::Scan;
+use crate::scan::{Scan, Scannable};
 use serde::Serialize;
 use std::mem::{self, MaybeUninit};
 use std::os::windows::io::{HandleOrNull, NullHandleError, OwnedHandle};
@@ -156,7 +156,11 @@ impl Process {
         }
     }
 
-    pub fn write_memory<T>(&self, addr: usize, value: &T) -> io::Result<usize> {
+    pub fn write_memory<const SIZE: usize, T: Scannable<SIZE>>(
+        &self,
+        addr: usize,
+        value: &T,
+    ) -> io::Result<usize> {
         let mut written = 0;
 
         // SAFETY: the input value buffer points to valid memory.
@@ -165,7 +169,7 @@ impl Process {
                 self.handle.as_raw_handle(),
                 addr as *mut _,
                 (value as *const T).cast(),
-                mem::size_of::<T>(),
+                SIZE,
                 &mut written,
             )
         } == FALSE
@@ -176,7 +180,11 @@ impl Process {
         }
     }
 
-    pub fn scan_regions(&self, regions: &[MEMORY_BASIC_INFORMATION], scan: Scan) -> Vec<Region> {
+    pub fn scan_regions<const SIZE: usize, T: Scannable<SIZE>>(
+        &self,
+        regions: &[MEMORY_BASIC_INFORMATION],
+        scan: Scan<SIZE, T>,
+    ) -> Vec<Region<SIZE, T>> {
         regions
             .iter()
             .flat_map(
@@ -195,7 +203,11 @@ impl Process {
             .collect()
     }
 
-    pub fn rescan_regions(&self, regions: &[Region], scan: Scan) -> Vec<Region> {
+    pub fn rescan_regions<const SIZE: usize, T: Scannable<SIZE>>(
+        &self,
+        regions: &[Region<SIZE, T>],
+        scan: Scan<SIZE, T>,
+    ) -> Vec<Region<SIZE, T>> {
         regions
             .iter()
             .flat_map(|region| {

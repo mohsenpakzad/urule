@@ -7,6 +7,7 @@ mod process;
 mod region;
 mod scan;
 
+use crate::scan::Scan;
 use process::{Process, ProcessView};
 use region::Region;
 use std::sync::Mutex;
@@ -14,7 +15,7 @@ use winapi::um::winnt;
 
 pub struct AppState {
     opened_process: Mutex<Option<Process>>,
-    last_scan: Mutex<Vec<Region>>,
+    last_scan: Mutex<Vec<Region<4, i32>>>,
 }
 
 impl AppState {
@@ -90,7 +91,7 @@ fn write_opened_process_memory(
 }
 
 #[tauri::command]
-fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region> {
+fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region<4, i32>> {
     state.last_scan.lock().unwrap().clone()
 }
 
@@ -111,7 +112,7 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
         .collect::<Vec<_>>();
 
     println!("Scanning {} memory regions", regions.len());
-    let scan = scan_str.parse().unwrap();
+    let scan = Scan::<4, i32>::Exact(scan_str.parse().unwrap());
     let last_scan = process.scan_regions(&regions, scan);
     println!(
         "Found {} locations",
@@ -123,7 +124,7 @@ fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
 
 #[tauri::command]
 fn next_scan(scan_str: String, state: tauri::State<AppState>) {
-    let scan = scan_str.parse().unwrap();
+    let scan = Scan::<4, i32>::Exact(scan_str.parse().unwrap());
     let last_scan = state
         .opened_process
         .lock()

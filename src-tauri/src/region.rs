@@ -1,21 +1,22 @@
+use crate::scan::Scannable;
 use serde::Serialize;
-use std::{collections::BTreeMap, mem, ops::Range};
+use std::{collections::BTreeMap, ops::Range};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
 
 /// A memory region.
 #[derive(Clone, Serialize)]
-pub struct Region {
+pub struct Region<const SIZE: usize, T: Scannable<SIZE>> {
     /// The raw information about this memory region.
     #[serde(skip_serializing)]
     pub info: MEMORY_BASIC_INFORMATION,
     /// Candidate locations that should be considered during subsequent scans.
-    pub locations: CandidateLocations,
+    pub locations: CandidateLocations<SIZE, T>,
 }
-unsafe impl Send for Region {}
+unsafe impl<const SIZE: usize, T: Scannable<SIZE>> Send for Region<SIZE, T> {}
 
-impl Region {
+impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
     /// Return the value stored at `addr`.
-    pub fn value_at(&self, addr: usize) -> i32 {
+    pub fn value_at(&self, addr: usize) -> T {
         match &self.locations {
             CandidateLocations::KeyValue(locations) => *locations.get(&addr).unwrap(),
             CandidateLocations::SameValue { value, .. } => *value,
@@ -37,7 +38,7 @@ impl Region {
                 let index = mask
                     .iter()
                     .enumerate()
-                    .map(|(index, mask)| (base + index * 4, mask))
+                    .map(|(index, mask)| (base + index * SIZE, mask))
                     .position(|(address, &mask)| mask && addr == address)
                     .unwrap();
                 values[index]
@@ -48,33 +49,30 @@ impl Region {
 
 /// Candidate memory locations for holding our desired value.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub enum CandidateLocations {
+pub enum CandidateLocations<const SIZE: usize, T: Scannable<SIZE>> {
     /// A key value locations.
-    KeyValue(BTreeMap<usize, i32>),
+    KeyValue(BTreeMap<usize, T>),
     /// A same value locations.
-    SameValue { locations: Vec<usize>, value: i32 },
+    SameValue { locations: Vec<usize>, value: T },
     /// A range of memory locations. Everything within here should be considered.
-    Range {
-        range: Range<usize>,
-        values: Vec<i32>,
-    },
+    Range { range: Range<usize>, values: Vec<T> },
     /// A Offsetted memory location. It uses steps to represent addresses.
     // TODO this could also assume 4-byte aligned so we'd gain 2 bits for offsets.
     Offsetted {
         base: usize,
         offsets: Vec<u16>,
-        values: Vec<i32>,
+        values: Vec<T>,
     },
     /// A masked memory location. Only items within the mask apply.
     /// The mask assumes 4-byte aligned data  (so one byte for every 4).
     Masked {
         base: usize,
         mask: Vec<bool>,
-        values: Vec<i32>,
+        values: Vec<T>,
     },
 }
 
-impl CandidateLocations {
+impl<const SIZE: usize, T: Scannable<SIZE>> CandidateLocations<SIZE, T> {
     /// Return the amount of candidate locations.
     pub fn len(&self) -> usize {
         match self {
@@ -151,7 +149,7 @@ impl CandidateLocations {
                 Box::new(locations.keys().into_iter().copied())
             }
             CandidateLocations::SameValue { locations, .. } => Box::new(locations.iter().copied()),
-            CandidateLocations::Range { range, .. } => Box::new(range.clone().step_by(4)),
+            CandidateLocations::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
             CandidateLocations::Offsetted { base, offsets, .. } => {
                 Box::new(offsets.iter().map(move |&offset| base + offset as usize))
             }
@@ -159,7 +157,7 @@ impl CandidateLocations {
                 mask.iter()
                     .enumerate()
                     .filter(|(_, &set)| set)
-                    .map(move |(i, _)| base + i * 4),
+                    .map(move |(i, _)| base + i * SIZE),
             ),
         }
     }

@@ -1,20 +1,84 @@
 use crate::region::{CandidateLocations, Region};
-use std::{borrow::Borrow, str::FromStr};
+use std::{borrow::Borrow, cmp::Ordering, str::FromStr};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
+
+// TODO: cleanup docs
+pub trait Scannable<const SIZE: usize>: Copy {
+    // TODO: write document
+    fn from_bytes<T: Scannable<SIZE>>(bytes: [u8; SIZE]) -> T;
+    /// Returns `true` if the current instance is considered equal to the given chunk of memory.
+    ///
+    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
+    /// the length represented by `Self`.
+    fn eq(&self, bytes: [u8; SIZE]) -> bool;
+
+    /// Compares `self` to the given chunk of memory.
+    ///
+    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
+    /// the length represented by `Self`.
+    fn cmp(&self, bytes: [u8; SIZE]) -> Ordering;
+
+    /// Substracts the given chunk of memory from `self`.
+    ///
+    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
+    /// the length represented by `Self`.
+    fn sub(&mut self, bytes: [u8; SIZE]);
+
+    /// Substracts `self` from the given chunk of memory.
+    ///
+    /// Callers must `assert_eq!(left.len(), right.len())`, and the length must also match that of
+    /// the length represented by `Self`.
+    fn rsub(&mut self, bytes: [u8; SIZE]);
+}
+
+macro_rules! impl_scannable_for_int {
+    ( $( $type:ty : $type_size:expr ),+ ) => {
+        $(
+            // SAFETY: caller is responsible to `assert_eq!(memory.len(), mem::size_of::<T>())`
+            impl Scannable<$type_size> for $type {
+                // type Type = $type;
+
+                fn from_bytes<T: Scannable<$type_size>>(bytes: [u8; $type_size]) -> T {
+                    unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }
+                }
+
+                 fn eq(&self, bytes: [u8; $type_size]) -> bool {
+                    let other = <$type>::from_ne_bytes(bytes);
+                    *self == other
+                }
+
+                 fn cmp(&self, bytes: [u8; $type_size]) -> Ordering {
+                    let other = <$type>::from_ne_bytes(bytes);
+                    <$type as Ord>::cmp(self, &other)
+                }
+
+                fn sub(&mut self, bytes: [u8; $type_size]){
+                    todo!()
+                }
+
+                fn rsub(&mut self, bytes: [u8; $type_size]){
+                    todo!()
+                }
+            }
+        )*
+    };
+}
+
+impl_scannable_for_int!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8);
 
 /// A scan type.
 ///
 /// The variant determines how a memory scan should be performed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Scan {
+pub enum Scan<const SIZE: usize, T: Scannable<SIZE>> {
     /// Perform an exact memory scan.
     /// Only memory locations containing this exact value will be considered.
-    Exact(i32),
+    Exact(T),
     /// The value is unknown.
     /// Every memory location is considered valid. This only makes sense for a first scan.
     Unknown,
     /// The value is contained within a given range.
-    InRange(i32, i32),
+    InRange(T, T),
     /// The value has not changed since the last scan.
     /// This only makes sense for subsequent scans.
     Unchanged,
@@ -29,27 +93,26 @@ pub enum Scan {
     Increased,
     /// The value has decreased by the given amount since the last scan.
     /// This only makes sense for subsequent scans.
-    DecreasedBy(i32),
+    DecreasedBy(T),
     /// The value has increased by the given amount since the last scan.
     /// This only makes sense for subsequent scans.
-    IncreasedBy(i32),
+    IncreasedBy(T),
 }
 
-impl Scan {
+impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
     /// Run the scan over the memory corresponding to the given region information.
     ///
     /// Returns a scanned region with all the results found.
-    pub fn run(&self, info: MEMORY_BASIC_INFORMATION, memory: Vec<u8>) -> Region {
+    pub fn run(&self, info: MEMORY_BASIC_INFORMATION, memory: Vec<u8>) -> Region<SIZE, T> {
         let base = info.BaseAddress as usize;
         match *self {
             Scan::Exact(value) => {
-                let target = value.to_ne_bytes();
                 let locations = memory
-                    .windows(target.len())
+                    .windows(SIZE)
                     .enumerate()
-                    .step_by(4)
+                    .step_by(SIZE)
                     .flat_map(|(offset, window)| {
-                        if window == target {
+                        if value.eq(window.try_into().unwrap()) {
                             Some(base + offset)
                         } else {
                             None
@@ -64,13 +127,13 @@ impl Scan {
             Scan::InRange(low, high) => {
                 let mut locations = CandidateLocations::KeyValue(
                     memory
-                        .windows(4)
+                        .windows(SIZE)
                         .enumerate()
-                        .step_by(4)
+                        .step_by(SIZE)
                         .flat_map(|(offset, window)| {
-                            let n = i32::from_ne_bytes(window.try_into().unwrap());
-                            if low <= n && n <= high {
-                                Some((base + offset, n))
+                            let n: [u8; SIZE] = window.try_into().unwrap();
+                            if low.cmp(n) != Ordering::Greater && high.cmp(n) != Ordering::Less {
+                                Some((base + offset, T::from_bytes(n))) // TODO
                             } else {
                                 None
                             }
@@ -93,9 +156,9 @@ impl Scan {
                 locations: CandidateLocations::Range {
                     range: base..base + info.RegionSize,
                     values: memory
-                        .windows(4)
-                        .step_by(4)
-                        .map(|value| i32::from_ne_bytes(value.try_into().unwrap()))
+                        .windows(SIZE)
+                        .step_by(SIZE)
+                        .map(|value| T::from_bytes(value.try_into().unwrap()))
                         .collect(),
                 },
             },
@@ -105,7 +168,7 @@ impl Scan {
     /// Re-run the scan over a previously-scanned memory region.
     ///
     /// Returns the new scanned region with all the results found.
-    pub fn rerun(&self, region: &Region, memory: Vec<u8>) -> Region {
+    pub fn rerun(&self, region: &Region<SIZE, T>, memory: Vec<u8>) -> Region<SIZE, T> {
         match *self {
             // Optimization: unknown scan won't narrow down the region at all.
             Scan::Unknown => region.clone(),
@@ -116,10 +179,8 @@ impl Scan {
                         .iter()
                         .flat_map(|addr| {
                             let base = addr - region.info.BaseAddress as usize;
-                            let new = i32::from_ne_bytes(
-                                memory[base..base + 4].borrow().try_into().unwrap(),
-                            );
-                            if new == value {
+                            let new = memory[base..base + SIZE].borrow().try_into().unwrap();
+                            if value.eq(new) {
                                 Some(addr)
                             } else {
                                 None
@@ -141,12 +202,9 @@ impl Scan {
                         .flat_map(|addr| {
                             let old = region.value_at(addr);
                             let base = addr - region.info.BaseAddress as usize;
-                            let new = i32::from_ne_bytes(
-                                memory[base..base + 4].borrow().try_into().unwrap(),
-                            );
-                            println!("Old: {}, new: {}", old, new);
+                            let new = memory[base..base + SIZE].borrow().try_into().unwrap();
                             if self.acceptable(old, new) {
-                                Some((addr, new))
+                                Some((addr, T::from_bytes(new)))
                             } else {
                                 None
                             }
@@ -172,17 +230,21 @@ impl Scan {
     /// let scan = Scan::Increased;
     /// assert!(scan.acceptable(5, 7));
     /// ```
-    fn acceptable(&self, old: i32, new: i32) -> bool {
+    fn acceptable(&self, old: T, new: [u8; SIZE]) -> bool {
         match *self {
-            Scan::Exact(n) => new == n,
+            Scan::Exact(n) => n.eq(new),
             Scan::Unknown => true,
-            Scan::InRange(low, high) => low <= new && new <= high,
-            Scan::Unchanged => new == old,
-            Scan::Changed => new != old,
-            Scan::Decreased => new < old,
-            Scan::Increased => new > old,
-            Scan::DecreasedBy(n) => old.wrapping_sub(new) == n,
-            Scan::IncreasedBy(n) => new.wrapping_sub(old) == n,
+            Scan::InRange(low, high) => {
+                // low <= new && new <= high
+                low.cmp(new) != Ordering::Greater && high.cmp(new) != Ordering::Less
+            }
+            Scan::Unchanged => old.eq(new),
+            Scan::Changed => !old.eq(new),
+            Scan::Decreased => old.cmp(new) == Ordering::Greater,
+            Scan::Increased => old.cmp(new) == Ordering::Less,
+            _ => true // TODO: implement these variants
+            // Scan::DecreasedBy(n) => old.wrapping_sub(new) == n,
+            // Scan::IncreasedBy(n) => new.wrapping_sub(old) == n,
         }
     }
 }
