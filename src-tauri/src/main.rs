@@ -34,15 +34,31 @@ fn main() {
     tauri::Builder::default()
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
+            get_processes,
             get_opened_process,
             write_opened_process_memory,
             get_last_scan,
-            get_processes,
             first_scan,
             next_scan,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn get_processes() -> Vec<ProcessView> {
+    process::enum_proc()
+        .unwrap()
+        .into_iter()
+        .flat_map(Process::open)
+        .flat_map(|proc| match proc.name() {
+            Ok(name) => Ok(ProcessView {
+                pid: proc.pid(),
+                name,
+            }),
+            Err(err) => Err(err),
+        })
+        .collect::<Vec<_>>()
 }
 
 #[tauri::command]
@@ -76,22 +92,6 @@ fn write_opened_process_memory(
 #[tauri::command]
 fn get_last_scan(state: tauri::State<AppState>) -> Vec<Region> {
     state.last_scan.lock().unwrap().clone()
-}
-
-#[tauri::command]
-fn get_processes() -> Vec<ProcessView> {
-    process::enum_proc()
-        .unwrap()
-        .into_iter()
-        .flat_map(Process::open)
-        .flat_map(|proc| match proc.name() {
-            Ok(name) => Ok(ProcessView {
-                pid: proc.pid(),
-                name,
-            }),
-            Err(err) => Err(err),
-        })
-        .collect::<Vec<_>>()
 }
 
 #[tauri::command]
