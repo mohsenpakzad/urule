@@ -187,106 +187,107 @@ impl Scan {
     }
 }
 
-impl FromStr for Scan {
-    type Err = std::num::ParseIntError;
+// TODO:
+// impl<const SIZE: usize, T: Scannable<SIZE> + std::str::FromStr> FromStr for Scan<SIZE, T> {
+//     type Err = std::num::ParseIntError;
 
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Ok(match value.as_bytes()[0] {
-            b'u' => Scan::Unknown,
-            b'=' => Scan::Unchanged,
-            b'~' => Scan::Changed,
-            t @ b'd' | t @ b'i' => {
-                let n = value[1..].trim();
-                if n.is_empty() {
-                    if t == b'd' {
-                        Scan::Decreased
-                    } else {
-                        Scan::Increased
-                    }
-                } else {
-                    let n = n.parse()?;
-                    if t == b'd' {
-                        Scan::DecreasedBy(n)
-                    } else {
-                        Scan::IncreasedBy(n)
-                    }
-                }
-            }
-            _ => {
-                let (low, high) = if let Some(i) = value.find("..=") {
-                    (value[..i].parse()?, value[i + 3..].parse()?)
-                } else if let Some(i) = value.find("..") {
-                    (value[..i].parse()?, value[i + 2..].parse::<i32>()? - 1)
-                } else {
-                    let n = value.parse()?;
-                    (n, n)
-                };
+//     fn from_str(value: &str) -> Result<Self, Self::Err> {
+//         Ok(match value.as_bytes()[0] {
+//             b'u' => Scan::Unknown,
+//             b'=' => Scan::Unchanged,
+//             b'~' => Scan::Changed,
+//             t @ b'd' | t @ b'i' => {
+//                 let n = value[1..].trim();
+//                 if n.is_empty() {
+//                     if t == b'd' {
+//                         Scan::Decreased
+//                     } else {
+//                         Scan::Increased
+//                     }
+//                 } else {
+//                     let n = n.parse()?;
+//                     if t == b'd' {
+//                         Scan::DecreasedBy(n)
+//                     } else {
+//                         Scan::IncreasedBy(n)
+//                     }
+//                 }
+//             }
+//             _ => {
+//                 let (low, high) = if let Some(i) = value.find("..=") {
+//                     (value[..i].parse()?, value[i + 3..].parse()?)
+//                 } else if let Some(i) = value.find("..") {
+//                     (value[..i].parse()?, value[i + 2..].parse::<i32>()? - 1)
+//                 } else {
+//                     let n = value.parse()?;
+//                     (n, n)
+//                 };
 
-                if low == high {
-                    Scan::Exact(low)
-                } else {
-                    Scan::InRange(low, high)
-                }
-            }
-        })
-    }
-}
+//                 if low == high {
+//                     Scan::Exact(low)
+//                 } else {
+//                     Scan::InRange(low, high)
+//                 }
+//             }
+//         })
+//     }
+// }
 
-#[cfg(test)]
-mod scan_tests {
-    use super::*;
+// #[cfg(test)]
+// mod scan_tests {
+//     use super::*;
 
-    #[test]
-    fn exact() {
-        assert_eq!("42".parse(), Ok(Scan::Exact(42)));
-        assert_eq!("-42".parse(), Ok(Scan::Exact(-42)));
-    }
+//     #[test]
+//     fn exact() {
+//         assert_eq!("42".parse(), Ok(Scan::Exact(42)));
+//         assert_eq!("-42".parse(), Ok(Scan::Exact(-42)));
+//     }
 
-    #[test]
-    fn unknown() {
-        assert_eq!("u".parse(), Ok(Scan::Unknown));
-    }
+//     #[test]
+//     fn unknown() {
+//         assert_eq!("u".parse(), Ok(Scan::Unknown));
+//     }
 
-    #[test]
-    fn in_range() {
-        assert_eq!("12..34".parse(), Ok(Scan::InRange(12, 33)));
-        assert_eq!("12..=34".parse(), Ok(Scan::InRange(12, 34)));
-    }
+//     #[test]
+//     fn in_range() {
+//         assert_eq!("12..34".parse(), Ok(Scan::InRange(12, 33)));
+//         assert_eq!("12..=34".parse(), Ok(Scan::InRange(12, 34)));
+//     }
 
-    #[test]
-    fn unchanged() {
-        assert_eq!("=".parse(), Ok(Scan::Unchanged));
-    }
+//     #[test]
+//     fn unchanged() {
+//         assert_eq!("=".parse(), Ok(Scan::Unchanged));
+//     }
 
-    #[test]
-    fn changed() {
-        assert_eq!("~".parse(), Ok(Scan::Changed));
-    }
+//     #[test]
+//     fn changed() {
+//         assert_eq!("~".parse(), Ok(Scan::Changed));
+//     }
 
-    #[test]
-    fn decreased() {
-        assert_eq!("d".parse(), Ok(Scan::Decreased));
-    }
+//     #[test]
+//     fn decreased() {
+//         assert_eq!("d".parse(), Ok(Scan::Decreased));
+//     }
 
-    #[test]
-    fn increased() {
-        assert_eq!("i".parse(), Ok(Scan::Increased));
-    }
+//     #[test]
+//     fn increased() {
+//         assert_eq!("i".parse(), Ok(Scan::Increased));
+//     }
 
-    #[test]
-    fn decreased_by() {
-        assert_eq!("d42".parse(), Ok(Scan::DecreasedBy(42)));
-        assert_eq!("d 42".parse(), Ok(Scan::DecreasedBy(42)));
-        assert_eq!("d-42".parse(), Ok(Scan::DecreasedBy(-42)));
-    }
+//     #[test]
+//     fn decreased_by() {
+//         assert_eq!("d42".parse(), Ok(Scan::DecreasedBy(42)));
+//         assert_eq!("d 42".parse(), Ok(Scan::DecreasedBy(42)));
+//         assert_eq!("d-42".parse(), Ok(Scan::DecreasedBy(-42)));
+//     }
 
-    #[test]
-    fn increased_by() {
-        assert_eq!("i42".parse(), Ok(Scan::IncreasedBy(42)));
-        assert_eq!("i 42".parse(), Ok(Scan::IncreasedBy(42)));
-        assert_eq!("i-42".parse(), Ok(Scan::IncreasedBy(-42)));
-    }
-}
+//     #[test]
+//     fn increased_by() {
+//         assert_eq!("i42".parse(), Ok(Scan::IncreasedBy(42)));
+//         assert_eq!("i 42".parse(), Ok(Scan::IncreasedBy(42)));
+//         assert_eq!("i-42".parse(), Ok(Scan::IncreasedBy(-42)));
+//     }
+// }
 
 #[cfg(test)]
 mod candidate_location_tests {
