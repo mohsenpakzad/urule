@@ -73,7 +73,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                         .flat_map(|(offset, window)| {
                             let n: [u8; SIZE] = window.try_into().unwrap();
                             if low.cmp(n) != Ordering::Greater && high.cmp(n) != Ordering::Less {
-                                Some((base + offset, T::from_bytes(n))) // TODO
+                                Some((base + offset, T::from_bytes(n)))
                             } else {
                                 None
                             }
@@ -182,9 +182,12 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
             Scan::Changed => !old.eq(new),
             Scan::Decreased => old.cmp(new) == Ordering::Greater,
             Scan::Increased => old.cmp(new) == Ordering::Less,
-            _ => true // TODO: implement these variants
-            // Scan::DecreasedBy(n) => old.wrapping_sub(new) == n,
-            // Scan::IncreasedBy(n) => new.wrapping_sub(old) == n,
+            Scan::DecreasedBy(n) => n.eq(old.sub(new)),
+            Scan::IncreasedBy(n) => {
+                let old = old.to_bytes();
+                let new = T::from_bytes::<T>(new);
+                n.eq(new.sub(old))
+            }
         }
     }
 }
