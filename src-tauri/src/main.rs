@@ -109,6 +109,7 @@ macro_rules! impl_scan {
                 fn [<first_scan_ $type>](pid: u32, value_type: ValueType, scan_info: ScanInfo, state: tauri::State<AppState>) {
                     let process = Process::open(pid).unwrap();
                     println!("Opened process {:?}", process);
+                    println!("****FirstScan****\nValueType: {:?}, ScanInfo: {:?}", value_type, scan_info);
 
                     const MASK: u32 = winnt::PAGE_EXECUTE_READWRITE
                         | winnt::PAGE_EXECUTE_WRITECOPY
@@ -135,6 +136,10 @@ macro_rules! impl_scan {
 
                 #[tauri::command]
                 fn [<next_scan_ $type>](scan_info: ScanInfo, state: tauri::State<AppState>) {
+                    println!(
+                        "****NextScan****\nValueType: {:?}, ScanInfo: {:?}",
+                        &state.scan_value_type.lock().unwrap(), scan_info
+                    );
                     let scan = scan_info
                         .to_scan(&state.scan_value_type.lock().unwrap())
                         .unwrap();

@@ -2,13 +2,13 @@ use super::{Scan, Scannable};
 use paste::paste;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ScanInfo {
     typ: ScanType,
     value: Option<ScanValue>,
 }
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum ScanType {
     Exact,
     Unknown,
@@ -21,15 +21,15 @@ pub enum ScanType {
     IncreasedBy,
 }
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum ScanValue {
     Exact(String),
     Range { start: String, end: String },
 }
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum ValueType {
-    I8 = 0,
+    I8,
     U8,
     I16,
     U16,
