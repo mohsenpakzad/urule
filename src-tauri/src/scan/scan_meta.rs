@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct ScanInfo {
     typ: ScanType,
-    value: ScanValue,
+    value: Option<ScanValue>,
 }
 
 #[derive(PartialEq, Eq, Deserialize)]
@@ -63,7 +63,7 @@ macro_rules! impl_into_scan {
                         _ => (),
                     }
 
-                    if let ScanValue::Exact(exact_val) = self.value {
+                    if let Some(ScanValue::Exact(exact_val)) = self.value {
                         match self.typ {
                             ScanType::Exact => return Some(Scan::<$type_size, $type>::Exact(exact_val.parse().unwrap())),
                             ScanType::DecreasedBy => {
@@ -74,7 +74,7 @@ macro_rules! impl_into_scan {
                             }
                             _ => (),
                         };
-                    } else if let ScanValue::Range { start, end } = self.value {
+                    } else if let Some(ScanValue::Range { start, end }) = self.value {
                         match self.typ {
                             ScanType::InRange => {
                                 return Some(Scan::<$type_size, $type>::InRange(

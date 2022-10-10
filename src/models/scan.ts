@@ -1,6 +1,6 @@
 export interface ScanInfo {
   typ: ScanType;
-  value: ScanValue;
+  value?: ScanValue;
 }
 
 export enum ScanType {
