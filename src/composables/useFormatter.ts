@@ -1,9 +1,8 @@
 import { Process } from 'src/models/core';
 
 export function useFormatter() {
-
   const nf = Intl.NumberFormat('en');
-  const bigNf = Intl.NumberFormat('en', {  notation: 'scientific' });
+  const bigNf = Intl.NumberFormat('en', { notation: 'scientific' });
 
   function formatNumber(num: number) {
     if (num > 2 ** 32 || num < (-2) ** 31) {
@@ -13,15 +12,15 @@ export function useFormatter() {
   }
 
   function formatProcess(process: Process) {
-    return `${process.name} - ${process.pid}`
+    return `${process.name} - ${process.pid}`;
   }
 
-  function formatMinMaxValue(min: number, max: number){
-    return `Min: ${formatNumber(min)}, Max: ${formatNumber(max)}`
+  function formatMinMaxValue(min: number, max: number) {
+    return `Min: ${formatNumber(min)}, Max: ${formatNumber(max)}`;
   }
 
   function formatNumberToHex(num: number) {
-    return `0x${num.toString(16).toUpperCase()}`
+    return `0x${num.toString(16).toUpperCase()}`;
   }
 
   return {
@@ -29,5 +28,5 @@ export function useFormatter() {
     formatProcess,
     formatMinMaxValue,
     formatNumberToHex,
-  }
+  };
 }
