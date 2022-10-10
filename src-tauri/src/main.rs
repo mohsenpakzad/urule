@@ -7,15 +7,17 @@ mod process;
 mod region;
 mod scan;
 
-use crate::scan::Scan;
+use crate::scan::scan_meta::IntoScan;
 use paste::paste;
 use process::{Process, ProcessView};
 use region::Region;
+use scan::scan_meta::{ScanInfo, ValueType};
 use std::sync::Mutex;
 use winapi::um::winnt;
 
 pub struct AppState {
     opened_process: Mutex<Option<Process>>,
+    scan_value_type: Mutex<ValueType>,
     last_scan: Mutex<Vec<Region<4, i32>>>,
 }
 
@@ -23,6 +25,7 @@ impl AppState {
     fn new() -> Self {
         AppState {
             opened_process: Mutex::new(None),
+            scan_value_type: Mutex::new(ValueType::I32),
             last_scan: Mutex::new(Vec::new()),
         }
     }
@@ -100,7 +103,7 @@ macro_rules! impl_scan {
             }
 
             #[tauri::command]
-            fn first_scan(pid: u32, scan_str: String, state: tauri::State<AppState>) {
+            fn first_scan(pid: u32, value_type: ValueType, scan_info: ScanInfo, state: tauri::State<AppState>) {
                 let process = Process::open(pid).unwrap();
                 println!("Opened process {:?}", process);
 
@@ -116,19 +119,22 @@ macro_rules! impl_scan {
                     .collect::<Vec<_>>();
 
                 println!("Scanning {} memory regions", regions.len());
-                let scan = Scan::<$type_size, $type>::Exact(scan_str.parse().unwrap());
+                let scan = scan_info.to_scan(&value_type).unwrap();
                 let last_scan = process.scan_regions(&regions, scan);
                 println!(
                     "Found {} locations",
                     last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
                 );
                 *state.opened_process.lock().unwrap() = Some(process);
+                *state.scan_value_type.lock().unwrap() = value_type;
                 *state.last_scan.lock().unwrap() = last_scan;
             }
 
             #[tauri::command]
-            fn next_scan(scan_str: String, state: tauri::State<AppState>) {
-                let scan = Scan::<$type_size, $type>::Exact(scan_str.parse().unwrap());
+            fn next_scan(scan_info: ScanInfo, state: tauri::State<AppState>) {
+                let scan = scan_info
+                    .to_scan(&state.scan_value_type.lock().unwrap())
+                    .unwrap();
                 let last_scan = state
                     .opened_process
                     .lock()

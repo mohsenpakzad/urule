@@ -1,4 +1,6 @@
+pub mod scan_meta;
 mod scannable;
+
 use crate::region::{CandidateLocations, Region};
 pub use scannable::Scannable;
 use std::{borrow::Borrow, cmp::Ordering};
