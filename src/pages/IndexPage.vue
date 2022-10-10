@@ -67,19 +67,32 @@ function baseScanValueRules() {
 
 const scanValueRules = computed(() => baseScanValueRules());
 const scanValueMinRangeRules = computed(() => {
-  const max = parseFloat(scanData.value.range.max);
-  return [...baseScanValueRules(), max ? rules.ruleSmaller(max) : undefined];
+  if (scanData.value.Range) {
+    const max = parseFloat(scanData.value.Range.end);
+    return [...baseScanValueRules(), max ? rules.ruleSmaller(max) : undefined];
+  }
+  return [];
 });
 const scanValueMaxRangeRules = computed(() => {
-  const min = parseFloat(scanData.value.range.min);
-  return [...baseScanValueRules(), min ? rules.ruleBigger(min) : undefined];
+  if (scanData.value.Range) {
+    const min = parseFloat(scanData.value.Range.start);
+    return [...baseScanValueRules(), min ? rules.ruleBigger(min) : undefined];
+  }
+  return [];
 });
 
 async function firstScan() {
   if (!store.openedProcess || !(await scanForm.value?.validate())) return;
   q.loading.show();
 
-  await uruleCore.firstScan(store.openedProcess.pid, scanData.value.exact);
+  await uruleCore.firstScan(
+    store.openedProcess.pid,
+    scanData.valueType!.value,
+    {
+      typ: scanData.scanType!.value,
+      value: scanData.value,
+    }
+  );
   addressList.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
@@ -90,7 +103,10 @@ async function nextScan() {
   if (!(await scanForm.value?.validate())) return;
   q.loading.show();
 
-  await uruleCore.nextScan(scanData.value.exact);
+  await uruleCore.nextScan({
+    typ: scanData.scanType!.value,
+    value: scanData.value,
+  });
   addressList.value = await uruleCore.getLastScan();
 
   q.loading.hide();
@@ -224,7 +240,7 @@ function writeMemory() {
                 label="Value"
                 outlined
                 dense
-                v-model="scanData.value.exact"
+                v-model="scanData.value.Exact"
                 reactive-rules
                 :rules="scanValueRules"
                 clearable
@@ -245,7 +261,7 @@ function writeMemory() {
                 label="Minimum Value"
                 outlined
                 dense
-                v-model="scanData.value.range.min"
+                v-model="scanData.value.Range!.start"
                 reactive-rules
                 :rules="scanValueMinRangeRules"
                 clearable
@@ -262,7 +278,7 @@ function writeMemory() {
                 label="Maximum Value"
                 outlined
                 dense
-                v-model="scanData.value.range.max"
+                v-model="scanData.value.Range!.end"
                 reactive-rules
                 :rules="scanValueMaxRangeRules"
                 clearable

@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import { QForm } from 'quasar';
 import { useRules } from 'src/composables/useRules';
 import { Address, Process } from 'src/models/core';
-import { ScanState, ScanType, ValueType } from 'src/models/scan';
+import { ScanState, ScanType, ScanValue, ValueType } from 'src/models/scan';
 
 export const useStore = defineStore('main', () => {
   const rules = useRules();
@@ -134,9 +134,9 @@ export const useStore = defineStore('main', () => {
   const scanData = reactive({
     scanType: scanTypes.find((e) => e.value === ScanType.Exact),
     valueType: valueTypes.find((e) => e.value === ValueType.I32),
-    value: {
-      exact: '',
-      range: { min: '', max: '' },
+    value: <ScanValue>{
+      Exact: '',
+      Range: { start: '', end: '' },
     },
   });
   const scanForm = ref<QForm>();
