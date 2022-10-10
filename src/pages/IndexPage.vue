@@ -230,8 +230,8 @@ function writeMemory() {
                 clearable
                 :hint="
                   formatter.formatMinMaxValue(
-                    scanData.valueType.min,
-                    scanData.valueType.max
+                    scanData.valueType!.min,
+                    scanData.valueType!.max
                   )
                 "
               />
@@ -251,8 +251,8 @@ function writeMemory() {
                 clearable
                 :hint="
                   formatter.formatMinMaxValue(
-                    scanData.valueType.min,
-                    scanData.valueType.max
+                    scanData.valueType!.min,
+                    scanData.valueType!.max
                   )
                 "
               />
@@ -268,8 +268,8 @@ function writeMemory() {
                 clearable
                 :hint="
                   formatter.formatMinMaxValue(
-                    scanData.valueType.min,
-                    scanData.valueType.max
+                    scanData.valueType!.min,
+                    scanData.valueType!.max
                   )
                 "
               />
