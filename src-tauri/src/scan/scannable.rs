@@ -7,6 +7,9 @@ pub trait Scannable<const SIZE: usize>: Copy {
     /// Create a Scannable value from its memory representation as a byte array.
     fn from_bytes<T: Scannable<SIZE>>(bytes: [u8; SIZE]) -> T;
 
+    /// Return the memory representation of this Scannable as a byte array.
+    fn to_bytes(self) -> [u8; SIZE];
+
     /// Returns `true` if the current instance is considered equal to the given chunk of memory.
     fn eq(&self, bytes: [u8; SIZE]) -> bool;
 
@@ -25,6 +28,10 @@ macro_rules! impl_scannable_for_int {
                 fn from_bytes<T: Scannable<$type_size>>(bytes: [u8; $type_size]) -> T {
                     // SAFETY: size of input and output is always the same
                     unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }
+                }
+
+                fn to_bytes(self) -> [u8; $type_size] {
+                    self.to_ne_bytes()
                 }
 
                  fn eq(&self, bytes: [u8; $type_size]) -> bool {
