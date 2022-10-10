@@ -1,4 +1,5 @@
 use super::{Scan, Scannable};
+use paste::paste;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -44,44 +45,53 @@ pub trait IntoScan<const SIZE: usize, T: Scannable<SIZE>> {
     fn to_scan(self, value_type: &ValueType) -> Option<Scan<SIZE, T>>;
 }
 
-impl IntoScan<4, i32> for ScanInfo {
-    fn to_scan(self, value_type: &ValueType) -> Option<Scan<4, i32>> {
-        if value_type != &ValueType::I32 {
-            return None;
-        }
+macro_rules! impl_into_scan {
+    ($( $type:ty : $type_size:expr ),+ ) => {
+        $(paste!{
+            impl IntoScan<$type_size, $type> for ScanInfo {
+                fn to_scan(self, value_type: &ValueType) -> Option<Scan<$type_size, $type>> {
+                     if value_type != &ValueType::[<$type:upper>] {
+                        return None;
+                    }
 
-        match self.typ {
-            ScanType::Unknown => return Some(Scan::<4, i32>::Unknown),
-            ScanType::Unchanged => return Some(Scan::<4, i32>::Unchanged),
-            ScanType::Changed => return Some(Scan::<4, i32>::Changed),
-            ScanType::Decreased => return Some(Scan::<4, i32>::Decreased),
-            ScanType::Increased => return Some(Scan::<4, i32>::Increased),
-            _ => (),
-        }
+                    match self.typ {
+                        ScanType::Unknown => return Some(Scan::<$type_size, $type>::Unknown),
+                        ScanType::Unchanged => return Some(Scan::<$type_size, $type>::Unchanged),
+                        ScanType::Changed => return Some(Scan::<$type_size, $type>::Changed),
+                        ScanType::Decreased => return Some(Scan::<$type_size, $type>::Decreased),
+                        ScanType::Increased => return Some(Scan::<$type_size, $type>::Increased),
+                        _ => (),
+                    }
 
-        if let ScanValue::Exact(exact_val) = self.value {
-            match self.typ {
-                ScanType::Exact => return Some(Scan::<4, i32>::Exact(exact_val.parse().unwrap())),
-                ScanType::DecreasedBy => {
-                    return Some(Scan::<4, i32>::DecreasedBy(exact_val.parse().unwrap()))
+                    if let ScanValue::Exact(exact_val) = self.value {
+                        match self.typ {
+                            ScanType::Exact => return Some(Scan::<$type_size, $type>::Exact(exact_val.parse().unwrap())),
+                            ScanType::DecreasedBy => {
+                                return Some(Scan::<$type_size, $type>::DecreasedBy(exact_val.parse().unwrap()))
+                            }
+                            ScanType::IncreasedBy => {
+                                return Some(Scan::<$type_size, $type>::IncreasedBy(exact_val.parse().unwrap()))
+                            }
+                            _ => (),
+                        };
+                    } else if let ScanValue::Range { start, end } = self.value {
+                        match self.typ {
+                            ScanType::InRange => {
+                                return Some(Scan::<$type_size, $type>::InRange(
+                                    start.parse().unwrap(),
+                                    end.parse().unwrap(),
+                                ))
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    None
                 }
-                ScanType::IncreasedBy => {
-                    return Some(Scan::<4, i32>::IncreasedBy(exact_val.parse().unwrap()))
-                }
-                _ => (),
-            };
-        } else if let ScanValue::Range { start, end } = self.value {
-            match self.typ {
-                ScanType::InRange => {
-                    return Some(Scan::<4, i32>::InRange(
-                        start.parse().unwrap(),
-                        end.parse().unwrap(),
-                    ))
-                }
-                _ => (),
             }
-        }
 
-        None
-    }
+        })+
+    };
 }
+
+impl_into_scan!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8);
