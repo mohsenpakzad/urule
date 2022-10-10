@@ -1,8 +1,5 @@
 import { route } from 'quasar/wrappers';
-import {
-  createRouter,
-  createWebHistory,
-} from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 
 import routes from './routes';
 import { WebviewWindow } from '@tauri-apps/api/window';
@@ -31,8 +28,10 @@ export default route(function (/* { store, ssrContext } */) {
   const mainWindow = WebviewWindow.getByLabel('main');
   const originalWindowTitle = tauri.windows[0].title;
   Router.afterEach(async (to) => {
-    if (to.name){
-      await mainWindow?.setTitle(`${originalWindowTitle} - ${to.name.toString()}`);
+    if (to.name) {
+      await mainWindow?.setTitle(
+        `${originalWindowTitle} - ${to.name.toString()}`
+      );
     } else {
       await mainWindow?.setTitle(originalWindowTitle);
     }

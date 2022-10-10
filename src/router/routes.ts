@@ -7,12 +7,12 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        component: () => import('pages/IndexPage.vue')
+        component: () => import('pages/IndexPage.vue'),
       },
       {
         name: 'Process List',
         path: '/process-list',
-        component: () => import('pages/ProcessList.vue')
+        component: () => import('pages/ProcessList.vue'),
       },
     ],
   },
