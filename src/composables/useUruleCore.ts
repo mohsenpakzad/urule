@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api';
 import { Address, Process, Region } from 'src/models/core';
-import { ScanInfo, ValueType } from 'src/models/scan';
+import { ScanInfo, ScanType, ValueType } from 'src/models/scan';
 
 export function useUruleCore() {
   let currentValueType = '';
@@ -39,13 +39,13 @@ export function useUruleCore() {
     await invoke<void>(`first_scan_${currentValueType}`, {
       pid,
       valueType,
-      scanInfo,
+      scanInfo: deleteUnnecessaryValues(scanInfo),
     });
   }
 
   async function nextScan(scanInfo: ScanInfo) {
     await invoke<void>(`next_scan_${currentValueType}`, {
-      scanInfo,
+      scanInfo: deleteUnnecessaryValues(scanInfo),
     });
   }
 
@@ -68,6 +68,28 @@ export function useUruleCore() {
       // TODO: handle other cases
       return [];
     });
+  }
+
+  function deleteUnnecessaryValues(scanInfo: ScanInfo) {
+    switch (scanInfo.typ) {
+      case ScanType.Unknown:
+      case ScanType.Unchanged:
+      case ScanType.Changed:
+      case ScanType.Decreased:
+      case ScanType.Increased:
+        delete scanInfo.value;
+        break;
+
+      case ScanType.Exact:
+      case ScanType.DecreasedBy:
+      case ScanType.IncreasedBy:
+        delete scanInfo.value?.Range;
+        break;
+
+      case ScanType.InRange:
+        delete scanInfo.value?.Exact;
+    }
+    return scanInfo;
   }
 
   return {
