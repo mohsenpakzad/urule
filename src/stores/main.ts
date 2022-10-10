@@ -6,7 +6,6 @@ import { Address, Process } from 'src/models/core';
 import { ScanState, ScanType, ValueType } from 'src/models/scan';
 
 export const useStore = defineStore('main', () => {
-
   const rules = useRules();
 
   const scanTypes = [
@@ -116,15 +115,15 @@ export const useStore = defineStore('main', () => {
     {
       label: 'Float 4 Bytes',
       value: ValueType.F32,
-      min: -3.40282347e+38,
-      max: 3.40282347e+38,
+      min: -3.40282347e38,
+      max: 3.40282347e38,
       format: rules.ruleDecimal,
     },
     {
       label: 'Float 8 Bytes',
       value: ValueType.F64,
-      min: -1.7976931348623157e+308,
-      max: 1.7976931348623157e+308,
+      min: -1.7976931348623157e308,
+      max: 1.7976931348623157e308,
       format: rules.ruleDecimal,
     },
   ];
@@ -133,18 +132,17 @@ export const useStore = defineStore('main', () => {
 
   const scanState = ref<ScanState>(ScanState.BeforeInitialScan);
   const scanData = reactive({
-    scanType: scanTypes.find(e => e.value === ScanType.Exact),
-    valueType: valueTypes.find(e => e.value === ValueType.I32),
+    scanType: scanTypes.find((e) => e.value === ScanType.Exact),
+    valueType: valueTypes.find((e) => e.value === ValueType.I32),
     value: {
       exact: '',
-      range: {min: '', max: ''}
-    }
+      range: { min: '', max: '' },
+    },
   });
   const scanForm = ref<QForm>();
 
   const addressList = ref<Address[]>([]);
   const selectedAddresses = ref<Address[]>([]);
-
 
   const scanTypeOptions = computed(() => {
     return scanTypes.filter((e) => e.availability & scanState.value);
@@ -180,5 +178,5 @@ export const useStore = defineStore('main', () => {
     //  computed
     scanTypeOptions,
     scanTypeOptionsRequiredInputs,
-  }
+  };
 });
