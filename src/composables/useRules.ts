@@ -3,7 +3,7 @@ import { useFormatter } from 'src/composables/useFormatter';
 export function useRules() {
   const formatter = useFormatter();
 
-  function ruleRequired(value: never) {
+  function ruleRequired(value: string) {
     return !!value || 'Required';
   }
 
