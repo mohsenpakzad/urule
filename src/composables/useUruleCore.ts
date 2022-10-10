@@ -1,20 +1,28 @@
 import { invoke } from '@tauri-apps/api';
 import { Address, Process, Region } from 'src/models/core';
+import { ScanInfo, ValueType } from 'src/models/scan';
 
 export function useUruleCore() {
+  let currentValueType = '';
+
   async function getOpenedProcess() {
     return await invoke<Process>('get_opened_process');
   }
 
   async function writeOpenedProcessMemory(address: number, value: number) {
-    return await invoke<number | null>('write_opened_process_memory', {
-      address,
-      value,
-    });
+    return await invoke<number | null>(
+      `write_opened_process_memory_${currentValueType}`,
+      {
+        address,
+        value,
+      }
+    );
   }
 
   async function getLastScan() {
-    const lastScanRegions = await invoke<Region[]>('get_last_scan');
+    const lastScanRegions = await invoke<Region[]>(
+      `get_last_scan_${currentValueType}`
+    );
     return convertRegionsToAddresses(lastScanRegions);
   }
 
@@ -22,14 +30,23 @@ export function useUruleCore() {
     return await invoke<Process[]>('get_processes');
   }
 
-  // TODO: add scan config to scan parameters
-  async function firstScan(pid: number, scanStr: string) {
-    await invoke<void>('first_scan', { pid, scanStr });
+  async function firstScan(
+    pid: number,
+    valueType: ValueType,
+    scanInfo: ScanInfo
+  ) {
+    currentValueType = valueType.toLowerCase();
+    await invoke<void>(`first_scan_${currentValueType}`, {
+      pid,
+      valueType,
+      scanInfo,
+    });
   }
 
-  // TODO: add scan config to scan parameters
-  async function nextScan(scanStr: string) {
-    await invoke<void>('next_scan', { scanStr });
+  async function nextScan(scanInfo: ScanInfo) {
+    await invoke<void>(`next_scan_${currentValueType}`, {
+      scanInfo,
+    });
   }
 
   function convertRegionsToAddresses(lastScanRegions: Region[]) {
