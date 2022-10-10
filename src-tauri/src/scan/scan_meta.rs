@@ -47,7 +47,7 @@ pub trait IntoScan<const SIZE: usize, T: Scannable<SIZE>> {
 
 macro_rules! impl_into_scan {
     ($( $type:ty : $type_size:expr ),+ ) => {
-        $(paste!{
+        paste!{$(
             impl IntoScan<$type_size, $type> for ScanInfo {
                 fn to_scan(self, value_type: &ValueType) -> Option<Scan<$type_size, $type>> {
                      if value_type != &ValueType::[<$type:upper>] {
@@ -90,7 +90,7 @@ macro_rules! impl_into_scan {
                 }
             }
 
-        })+
+        )+}
     };
 }
 
