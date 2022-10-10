@@ -59,25 +59,21 @@ function baseScanValueRules() {
   return [
     rules.ruleRequired,
     scanData.valueType?.format,
-    scanData.valueType ? rules.ruleBetween(scanData.valueType.min, scanData.valueType.max) : undefined,
-  ]
+    scanData.valueType
+      ? rules.ruleBetween(scanData.valueType.min, scanData.valueType.max)
+      : undefined,
+  ];
 }
 
-const scanValueRules = computed(() => baseScanValueRules())
+const scanValueRules = computed(() => baseScanValueRules());
 const scanValueMinRangeRules = computed(() => {
   const max = parseFloat(scanData.value.range.max);
-  return [
-    ...baseScanValueRules(),
-    max ? rules.ruleSmaller(max) : undefined,
-  ]
-})
+  return [...baseScanValueRules(), max ? rules.ruleSmaller(max) : undefined];
+});
 const scanValueMaxRangeRules = computed(() => {
   const min = parseFloat(scanData.value.range.min);
-  return [
-    ...baseScanValueRules(),
-    min ? rules.ruleBigger(min) : undefined,
-  ]
-})
+  return [...baseScanValueRules(), min ? rules.ruleBigger(min) : undefined];
+});
 
 async function firstScan() {
   if (!store.openedProcess || !(await scanForm.value?.validate())) return;
@@ -105,73 +101,65 @@ async function undoScan() {
 }
 
 async function newScan() {
-  addressList.value = []
-  selectedAddresses.value = []
-  await scanForm.value?.resetValidation()
+  addressList.value = [];
+  selectedAddresses.value = [];
+  await scanForm.value?.resetValidation();
 
   scanState.value = ScanState.BeforeInitialScan;
 }
 
 function writeMemory() {
-  selectedAddresses.value.forEach(async address => {
+  selectedAddresses.value.forEach(async (address) => {
     const value = parseFloat(changeValueDialogInput.value);
-    const writtenBytes = await uruleCore.writeOpenedProcessMemory(address.pointer, value)
+    const writtenBytes = await uruleCore.writeOpenedProcessMemory(
+      address.pointer,
+      value
+    );
 
     // TODO: instead of this, fetch these addresses value from last scan again
     if (writtenBytes) {
-      address.value = value
+      address.value = value;
     }
-    console.log(`${writtenBytes} bytes written.`)
-  })
+    console.log(`${writtenBytes} bytes written.`);
+  });
 
-  changeValueDialogInput.value = ''
+  changeValueDialogInput.value = '';
 }
 </script>
 
 <template>
   <q-page class="q-px-lg q-pt-lg" style="min-height: 0">
     <div class="q-gutter-y-md">
-      <q-card
-        class="q-px-lg q-pt-lg q-pb-sm"
-        bordered
-        flat
-      >
-        <q-form
-          class="q-gutter-y-sm"
-          ref="scanForm"
-        >
-
+      <q-card class="q-px-lg q-pt-lg q-pb-sm" bordered flat>
+        <q-form class="q-gutter-y-sm" ref="scanForm">
           <q-chip
             icon="saved_search"
-            :removable="store.openedProcess && scanState === ScanState.BeforeInitialScan"
+            :removable="
+              store.openedProcess && scanState === ScanState.BeforeInitialScan
+            "
             @remove="store.openedProcess = undefined"
             size="medium"
             :ripple="false"
           >
             {{
-              store.openedProcess ? formatter.formatProcess(store.openedProcess) : 'No Process Opened'
+              store.openedProcess
+                ? formatter.formatProcess(store.openedProcess)
+                : 'No Process Opened'
             }}
           </q-chip>
 
-          <div
-            class="row items-start q-mb-md"
-          >
-            <template
-              v-if="scanState === ScanState.BeforeInitialScan"
-            >
+          <div class="row items-start q-mb-md">
+            <template v-if="scanState === ScanState.BeforeInitialScan">
               <q-btn
                 label="First Scan"
                 icon="start"
                 color="primary"
                 @click.prevent="firstScan"
               >
-                <q-menu
-                  v-if="!openedProcess"
-                  anchor="top right"
-                >
+                <q-menu v-if="!openedProcess" anchor="top right">
                   <q-banner class="bg-accent text-white" dense>
                     <template v-slot:avatar>
-                      <q-icon name="playlist_add_check"/>
+                      <q-icon name="playlist_add_check" />
                     </template>
                     You have to open a process from process list first!
                   </q-banner>
@@ -179,9 +167,7 @@ function writeMemory() {
               </q-btn>
             </template>
 
-            <template
-              v-else-if="scanState === ScanState.AfterInitialScan"
-            >
+            <template v-else-if="scanState === ScanState.AfterInitialScan">
               <div class="q-gutter-sm">
                 <q-btn
                   label="Next Scan"
@@ -233,9 +219,7 @@ function writeMemory() {
           </div>
 
           <div>
-            <template
-              v-if="scanTypeOptionsRequiredInputs === 1"
-            >
+            <template v-if="scanTypeOptionsRequiredInputs === 1">
               <q-input
                 label="Value"
                 outlined
@@ -244,7 +228,12 @@ function writeMemory() {
                 reactive-rules
                 :rules="scanValueRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
+                :hint="
+                  formatter.formatMinMaxValue(
+                    scanData.valueType.min,
+                    scanData.valueType.max
+                  )
+                "
               />
             </template>
             <div
@@ -260,7 +249,12 @@ function writeMemory() {
                 reactive-rules
                 :rules="scanValueMinRangeRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
+                :hint="
+                  formatter.formatMinMaxValue(
+                    scanData.valueType.min,
+                    scanData.valueType.max
+                  )
+                "
               />
 
               <q-input
@@ -272,11 +266,15 @@ function writeMemory() {
                 reactive-rules
                 :rules="scanValueMaxRangeRules"
                 clearable
-                :hint="formatter.formatMinMaxValue(scanData.valueType.min, scanData.valueType.max)"
+                :hint="
+                  formatter.formatMinMaxValue(
+                    scanData.valueType.min,
+                    scanData.valueType.max
+                  )
+                "
               />
             </div>
           </div>
-
         </q-form>
       </q-card>
 
@@ -306,7 +304,9 @@ function writeMemory() {
           <q-dialog v-model="changeValueDialog">
             <q-card style="min-width: 350px">
               <q-card-section>
-                <div class="text-h6">Enter new value for selected addresses</div>
+                <div class="text-h6">
+                  Enter new value for selected addresses
+                </div>
               </q-card-section>
 
               <q-card-section class="q-pt-none">
@@ -320,8 +320,13 @@ function writeMemory() {
               </q-card-section>
 
               <q-card-actions align="right" class="text-primary">
-                <q-btn flat label="Cancel" v-close-popup @click="changeValueDialogInput = ''"/>
-                <q-btn flat label="Save" v-close-popup @click="writeMemory"/>
+                <q-btn
+                  flat
+                  label="Cancel"
+                  v-close-popup
+                  @click="changeValueDialogInput = ''"
+                />
+                <q-btn flat label="Save" v-close-popup @click="writeMemory" />
               </q-card-actions>
             </q-card>
           </q-dialog>

@@ -30,16 +30,16 @@ const processListColumns = [
     field: (p: Process) => p.pid,
   },
 ];
-const processList = ref<Process[]>([])
-const processesFilter = ref<string>()
-const selectedProcess = ref<Process[]>([])
+const processList = ref<Process[]>([]);
+const processesFilter = ref<string>();
+const selectedProcess = ref<Process[]>([]);
 
-const searchInput = ref<HTMLInputElement | null>(null)
+const searchInput = ref<HTMLInputElement | null>(null);
 
-const processListLoading = ref<boolean>(true)
+const processListLoading = ref<boolean>(true);
 
 function getSelectedString() {
-  return `${formatter.formatProcess(selectedProcess.value[0])} selected.`
+  return `${formatter.formatProcess(selectedProcess.value[0])} selected.`;
 }
 
 async function openProcess() {
@@ -49,14 +49,18 @@ async function openProcess() {
 }
 
 onStartTyping(() => {
-  searchInput.value?.focus()
-})
+  searchInput.value?.focus();
+});
 
 onMounted(async () => {
-  useIntervalFn(async () => {
-    processList.value = await uruleCore.getProcesses();
-    if (processListLoading.value) processListLoading.value = false
-  }, 1000, {immediateCallback: true});
+  useIntervalFn(
+    async () => {
+      processList.value = await uruleCore.getProcesses();
+      if (processListLoading.value) processListLoading.value = false;
+    },
+    1000,
+    { immediateCallback: true }
+  );
 });
 </script>
 
@@ -76,7 +80,7 @@ onMounted(async () => {
       row-key="pid"
       selection="single"
       v-model:selected="selectedProcess"
-      :pagination="{sortBy: 'name'}"
+      :pagination="{ sortBy: 'name' }"
       :selected-rows-label="getSelectedString"
       :loading="processListLoading"
     >
@@ -88,29 +92,22 @@ onMounted(async () => {
           debounce="300"
           v-model="processesFilter"
           placeholder="Type To Search"
-          style="caret-color: transparent;"
+          style="caret-color: transparent"
         >
           <template v-slot:append>
-            <q-icon name="search"/>
+            <q-icon name="search" />
           </template>
         </q-input>
       </template>
     </q-table>
 
-    <div
-      class="row justify-evenly items-center"
-      style="height: 15vh"
-    >
-      <q-btn
-        style="width: 10rem"
-        color="primary"
-        @click="openProcess"
-      >
+    <div class="row justify-evenly items-center" style="height: 15vh">
+      <q-btn style="width: 10rem" color="primary" @click="openProcess">
         Open
         <q-popup-proxy v-if="selectedProcess.length < 1">
           <q-banner class="bg-accent text-white" dense>
             <template v-slot:avatar>
-              <q-icon name="done"/>
+              <q-icon name="done" />
             </template>
             Please select a process first!
           </q-banner>
