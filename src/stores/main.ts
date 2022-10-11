@@ -140,6 +140,18 @@ export const useStore = defineStore('main', () => {
     },
   });
   const scanForm = ref<QForm>();
+  function resetScanData() {
+    if (
+      scanData.scanType?.value != ScanType.Exact &&
+      scanData.scanType?.value != ScanType.InRange
+    ) {
+      scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
+    }
+    scanData.value = <ScanValue>{
+      Exact: '',
+      Range: { start: '', end: '' },
+    };
+  }
 
   const addressList = ref<Address[]>([]);
   const selectedAddresses = ref<Address[]>([]);
@@ -178,5 +190,8 @@ export const useStore = defineStore('main', () => {
     //  computed
     scanTypeOptions,
     scanTypeOptionsRequiredInputs,
+
+    // functions
+    resetScanData,
   };
 });

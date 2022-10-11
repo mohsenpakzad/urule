@@ -19,6 +19,8 @@ const {
   valueTypes: valueTypeOptions,
 
   scanData,
+
+  resetScanData,
 } = store;
 
 const {
@@ -117,6 +119,9 @@ async function undoScan() {
 }
 
 async function newScan() {
+  await uruleCore.clearLastScan();
+
+  resetScanData();
   addressList.value = [];
   selectedAddresses.value = [];
   await scanForm.value?.resetValidation();
