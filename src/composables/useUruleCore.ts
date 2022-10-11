@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api';
-import { Address, Process, Region } from 'src/models/core';
+import { Address, CandidateLocations, Process } from 'src/models/core';
 import { ScanInfo, ScanType, ValueType } from 'src/models/scan';
 
 export function useUruleCore() {
@@ -28,10 +28,10 @@ export function useUruleCore() {
   }
 
   async function getLastScan() {
-    const lastScanRegions = await invoke<Region[]>(
+    const lastScanLocations = await invoke<CandidateLocations[]>(
       `get_last_scan_${currentValueType}`
     );
-    return convertRegionsToAddresses(lastScanRegions);
+    return convertCandidateLocationsToAddresses(lastScanLocations);
   }
 
   async function firstScan(
@@ -53,32 +53,34 @@ export function useUruleCore() {
     });
   }
 
-  function convertRegionsToAddresses(lastScanRegions: Region[]) {
-    return lastScanRegions.flatMap((region) => {
-      console.log(region.locations);
+  function convertCandidateLocationsToAddresses(
+    lastScanLocations: CandidateLocations[]
+  ) {
+    return lastScanLocations.flatMap((candidateLocation) => {
+      console.log(candidateLocation);
 
-      if (region.locations.KeyValue) {
-        return Object.entries(region.locations.KeyValue).map(
+      if (candidateLocation.KeyValue) {
+        return Object.entries(candidateLocation.KeyValue).map(
           ([pointer, value]) => <Address>{ pointer: parseInt(pointer), value }
         );
-      } else if (region.locations.SameValue) {
-        const { locations, value } = region.locations.SameValue;
+      } else if (candidateLocation.SameValue) {
+        const { locations, value } = candidateLocation.SameValue;
         return locations.map(
           (location) => <Address>{ pointer: location, value }
         );
-      } else if (region.locations.Range) {
-        const { range, step, values } = region.locations.Range;
+      } else if (candidateLocation.Range) {
+        const { range, step, values } = candidateLocation.Range;
         return values.map(
           (value, index) =>
             <Address>{ pointer: range.start + index * step, value }
         );
-      } else if (region.locations.Offsetted) {
-        const { base, offsets, values } = region.locations.Offsetted;
+      } else if (candidateLocation.Offsetted) {
+        const { base, offsets, values } = candidateLocation.Offsetted;
         return values.map(
           (value, index) => <Address>{ pointer: base + offsets[index], value }
         );
-      } else if (region.locations.Masked) {
-        const { base, step, mask, values } = region.locations.Masked;
+      } else if (candidateLocation.Masked) {
+        const { base, step, mask, values } = candidateLocation.Masked;
         return mask
           .map((m, index) => [m, base + index * step])
           .filter(([m]) => m)
