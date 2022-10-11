@@ -95,7 +95,6 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                 info,
                 locations: LocationsStyle::Range {
                     range: base..base + info.RegionSize,
-                    step: SIZE,
                     values: memory
                         .windows(SIZE)
                         .step_by(SIZE)
