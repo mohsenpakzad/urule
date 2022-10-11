@@ -95,7 +95,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
                 .into_iter()
                 .map(|address| Location { address, value })
                 .collect(),
-            LocationsStyle::Range { range, values, .. } => values
+            LocationsStyle::Range { range, values } => values
                 .into_iter()
                 .enumerate()
                 .map(|(index, value)| Location {
@@ -107,22 +107,20 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
                 base,
                 offsets,
                 values,
-            } => values
+            } => offsets
                 .into_iter()
-                .enumerate()
-                .map(|(index, value)| Location {
-                    address: base + offsets[index] as usize,
+                .zip(values)
+                .map(|(offset, value)| Location {
+                    address: base + offset as usize,
                     value,
                 })
                 .collect(),
-            LocationsStyle::Masked {
-                base, mask, values, ..
-            } => mask
+            LocationsStyle::Masked { base, mask, values } => mask
                 .into_iter()
                 .enumerate()
-                .filter(|(_, m)| *m)
+                .filter_map(|(index, m)| if m { Some(index) } else { None })
                 .zip(values)
-                .map(|((index, _), value)| Location {
+                .map(|(index, value)| Location {
                     address: base + index * SIZE,
                     value,
                 })
