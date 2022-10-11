@@ -57,19 +57,33 @@ export function useUruleCore() {
     return lastScanRegions.flatMap((region) => {
       console.log(region.locations);
 
-      if (region.locations.SameValue) {
-        const locations = region.locations.SameValue.locations;
-        const value = region.locations.SameValue.value;
-
-        return locations.map(
-          (location) => <Address>{ pointer: location, value }
-        );
-      } else if (region.locations.KeyValue) {
+      if (region.locations.KeyValue) {
         return Object.entries(region.locations.KeyValue).map(
           ([pointer, value]) => <Address>{ pointer: parseInt(pointer), value }
         );
+      } else if (region.locations.SameValue) {
+        const { locations, value } = region.locations.SameValue;
+        return locations.map(
+          (location) => <Address>{ pointer: location, value }
+        );
+      } else if (region.locations.Range) {
+        const { range, step, values } = region.locations.Range;
+        return values.map(
+          (value, index) =>
+            <Address>{ pointer: range.start + index * step, value }
+        );
+      } else if (region.locations.Offsetted) {
+        const { base, offsets, values } = region.locations.Offsetted;
+        return values.map(
+          (value, index) => <Address>{ pointer: base + offsets[index], value }
+        );
+      } else if (region.locations.Masked) {
+        const { base, step, mask, values } = region.locations.Masked;
+        return mask
+          .map((m, index) => [m, base + index * step])
+          .filter(([m]) => m)
+          .map(([, pointer]) => <Address>{ pointer, value: values.shift() });
       }
-      // TODO: handle other cases
       return [];
     });
   }
