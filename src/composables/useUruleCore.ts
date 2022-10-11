@@ -5,6 +5,10 @@ import { ScanInfo, ScanType, ValueType } from 'src/models/scan';
 export function useUruleCore() {
   let currentValueType = '';
 
+  async function getProcesses() {
+    return await invoke<Process[]>('get_processes');
+  }
+
   async function getOpenedProcess() {
     return await invoke<Process>('get_opened_process');
   }
@@ -24,10 +28,6 @@ export function useUruleCore() {
       `get_last_scan_${currentValueType}`
     );
     return convertRegionsToAddresses(lastScanRegions);
-  }
-
-  async function getProcesses() {
-    return await invoke<Process[]>('get_processes');
   }
 
   async function firstScan(
@@ -93,10 +93,10 @@ export function useUruleCore() {
   }
 
   return {
+    getProcesses,
     getOpenedProcess,
     writeOpenedProcessMemory,
     getLastScan,
-    getProcesses,
     firstScan,
     nextScan,
   };
