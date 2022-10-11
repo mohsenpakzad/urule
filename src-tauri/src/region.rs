@@ -84,6 +84,24 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         }
     }
 
+    /// Return a iterator over the location addresses.
+    pub fn addresses(&self) -> Box<dyn Iterator<Item = usize> + '_> {
+        match self {
+            LocationsStyle::KeyValue(locations) => Box::new(locations.keys().into_iter().copied()),
+            LocationsStyle::SameValue { locations, .. } => Box::new(locations.iter().copied()),
+            LocationsStyle::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
+            LocationsStyle::Offsetted { base, offsets, .. } => {
+                Box::new(offsets.iter().map(move |&offset| base + offset as usize))
+            }
+            LocationsStyle::Masked { base, mask, .. } => Box::new(
+                mask.iter()
+                    .enumerate()
+                    .filter(|(_, &set)| set)
+                    .map(move |(i, _)| base + i * SIZE),
+            ),
+        }
+    }
+
     /// Return the locations based on different location styles.
     pub fn into_locations(self) -> Vec<Location<SIZE, T>> {
         match self {
@@ -184,24 +202,6 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // // Neither of the attempts is really better than just storing the locations.
         // // Revert to using a discrete representation.
         // *self = CandidateLocations::KeyValue(locations);
-    }
-
-    /// Return a iterator over the locations.
-    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = usize> + 'a> {
-        match self {
-            LocationsStyle::KeyValue(locations) => Box::new(locations.keys().into_iter().copied()),
-            LocationsStyle::SameValue { locations, .. } => Box::new(locations.iter().copied()),
-            LocationsStyle::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
-            LocationsStyle::Offsetted { base, offsets, .. } => {
-                Box::new(offsets.iter().map(move |&offset| base + offset as usize))
-            }
-            LocationsStyle::Masked { base, mask, .. } => Box::new(
-                mask.iter()
-                    .enumerate()
-                    .filter(|(_, &set)| set)
-                    .map(move |(i, _)| base + i * SIZE),
-            ),
-        }
     }
 }
 
@@ -319,7 +319,7 @@ mod location_tests {
             value: VALUE,
         };
         assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
+            locations.addresses().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x200c],
         );
     }
@@ -329,7 +329,7 @@ mod location_tests {
         let locations =
             LocationsStyle::KeyValue(BTreeMap::from([(0x2000, 0), (0x2004, 1), (0x200c, 2)]));
         assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
+            locations.addresses().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x200c],
         );
     }
@@ -342,7 +342,7 @@ mod location_tests {
             values: VALUES,
         };
         assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
+            locations.addresses().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x200c]
         );
     }
@@ -354,7 +354,7 @@ mod location_tests {
             values: VALUES,
         };
         assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
+            locations.addresses().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x2008, 0x200c]
         );
     }
@@ -367,7 +367,7 @@ mod location_tests {
             values: VALUES,
         };
         assert_eq!(
-            locations.iter().collect::<Vec<_>>(),
+            locations.addresses().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x200c]
         );
     }

@@ -116,7 +116,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                 let locations = LocationsStyle::SameValue {
                     locations: region
                         .locations
-                        .iter()
+                        .addresses()
                         .flat_map(|addr| {
                             let base = addr - region.info.BaseAddress as usize;
                             let new = memory[base..base + SIZE].borrow().try_into().unwrap();
@@ -138,7 +138,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                 let mut locations = LocationsStyle::KeyValue(
                     region
                         .locations
-                        .iter()
+                        .addresses()
                         .flat_map(|addr| {
                             let old = region.value_at(addr);
                             let base = addr - region.info.BaseAddress as usize;
