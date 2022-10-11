@@ -16,7 +16,7 @@ export interface CandidateLocations {
   Masked?: { base: number; step: number; mask: boolean[]; values: number[] };
 }
 
-export interface Address {
-  pointer: number;
+export interface Location {
+  address: number;
   value: number;
 }

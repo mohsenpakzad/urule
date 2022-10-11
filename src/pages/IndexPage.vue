@@ -6,7 +6,7 @@ import { useQuasar } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
-import { Address } from 'src/models/core';
+import { Location } from 'src/models/core';
 import { ScanState } from 'src/models/scan';
 
 const store = useStore();
@@ -31,18 +31,18 @@ const {
   scanTypeOptions,
   scanTypeOptionsRequiredInputs,
 
-  addressList,
-  selectedAddresses,
+  locations,
+  selectedLocations,
 } = storeToRefs(store);
 
-const addressTableColumns = [
+const locationTableColumns = [
   {
-    name: 'name',
+    name: 'address',
     required: true,
     label: 'Address',
     align: 'left',
     sortable: true,
-    field: (p: Address) => formatter.formatNumberToHex(p.pointer),
+    field: (p: Location) => formatter.formatNumberToHex(p.address),
   },
   {
     name: 'value',
@@ -50,7 +50,7 @@ const addressTableColumns = [
     label: 'Value',
     align: 'left',
     sortable: true,
-    field: (p: Address) => p.value,
+    field: (p: Location) => p.value,
   },
 ];
 
@@ -95,7 +95,7 @@ async function firstScan() {
       value: scanData.value,
     }
   );
-  addressList.value = await uruleCore.getLastScan();
+  locations.value = await uruleCore.getLastScan();
 
   scanState.value = ScanState.AfterInitialScan;
   q.loading.hide();
@@ -109,7 +109,7 @@ async function nextScan() {
     typ: scanData.scanType!.value,
     value: scanData.value,
   });
-  addressList.value = await uruleCore.getLastScan();
+  locations.value = await uruleCore.getLastScan();
 
   q.loading.hide();
 }
@@ -122,24 +122,24 @@ async function newScan() {
   await uruleCore.clearLastScan();
 
   resetScanData();
-  addressList.value = [];
-  selectedAddresses.value = [];
+  locations.value = [];
+  selectedLocations.value = [];
   await scanForm.value?.resetValidation();
 
   scanState.value = ScanState.BeforeInitialScan;
 }
 
 function writeMemory() {
-  selectedAddresses.value.forEach(async (address) => {
+  selectedLocations.value.forEach(async (location) => {
     const value = parseFloat(changeValueDialogInput.value);
     const writtenBytes = await uruleCore.writeOpenedProcessMemory(
-      address.pointer,
+      location.address,
       value
     );
 
-    // TODO: instead of this, fetch these addresses value from last scan again
+    // TODO: instead of this, fetch these locations value from last scan again
     if (writtenBytes) {
-      address.value = value;
+      location.value = value;
     }
     console.log(`${writtenBytes} bytes written.`);
   });
@@ -302,20 +302,20 @@ function writeMemory() {
       <q-table
         class="q-pt-sm"
         style="height: 55vh"
-        title="Found Addresses"
+        title="Found Locations"
         bordered
         flat
         dense
-        :rows="addressList"
-        :columns="addressTableColumns"
+        :rows="locations"
+        :columns="locationTableColumns"
         rows-per-page-options="0"
-        row-key="pointer"
+        row-key="address"
         selection="multiple"
-        v-model:selected="selectedAddresses"
+        v-model:selected="selectedLocations"
       >
         <template v-slot:top-right>
           <q-btn
-            v-if="selectedAddresses.length > 0"
+            v-if="selectedLocations.length > 0"
             label="Change value of selected addresses"
             color="primary"
             icon="edit"

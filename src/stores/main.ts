@@ -2,7 +2,7 @@ import { computed, reactive, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { QForm } from 'quasar';
 import { useRules } from 'src/composables/useRules';
-import { Address, Process } from 'src/models/core';
+import { Location, Process } from 'src/models/core';
 import { ScanState, ScanType, ScanValue, ValueType } from 'src/models/scan';
 
 export const useStore = defineStore('main', () => {
@@ -153,8 +153,8 @@ export const useStore = defineStore('main', () => {
     };
   }
 
-  const addressList = ref<Address[]>([]);
-  const selectedAddresses = ref<Address[]>([]);
+  const locations = ref<Location[]>([]);
+  const selectedLocations = ref<Location[]>([]);
 
   const scanTypeOptions = computed(() => {
     return scanTypes.filter((e) => e.availability & scanState.value);
@@ -184,8 +184,8 @@ export const useStore = defineStore('main', () => {
     scanData,
     scanForm,
 
-    addressList,
-    selectedAddresses,
+    locations,
+    selectedLocations,
 
     //  computed
     scanTypeOptions,
