@@ -12,6 +12,7 @@ pub struct Region<const SIZE: usize, T: Scannable<SIZE>> {
     /// Candidate locations that should be considered during subsequent scans.
     pub locations: CandidateLocations<SIZE, T>,
 }
+
 unsafe impl<const SIZE: usize, T: Scannable<SIZE>> Send for Region<SIZE, T> {}
 
 impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
@@ -34,7 +35,9 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                     .unwrap();
                 values[index]
             }
-            CandidateLocations::Masked { values, base, mask } => {
+            CandidateLocations::Masked {
+                values, base, mask, ..
+            } => {
                 let index = mask
                     .iter()
                     .enumerate()
@@ -55,9 +58,12 @@ pub enum CandidateLocations<const SIZE: usize, T: Scannable<SIZE>> {
     /// A same value locations.
     SameValue { locations: Vec<usize>, value: T },
     /// A range of memory locations. Everything within here should be considered.
-    Range { range: Range<usize>, values: Vec<T> },
+    Range {
+        range: Range<usize>,
+        step: usize,
+        values: Vec<T>,
+    },
     /// A Offsetted memory location. It uses steps to represent addresses.
-    // TODO this could also assume 4-byte aligned so we'd gain 2 bits for offsets.
     Offsetted {
         base: usize,
         offsets: Vec<u16>,
@@ -67,6 +73,7 @@ pub enum CandidateLocations<const SIZE: usize, T: Scannable<SIZE>> {
     /// The mask assumes 4-byte aligned data  (so one byte for every 4).
     Masked {
         base: usize,
+        step: usize,
         mask: Vec<bool>,
         values: Vec<T>,
     },
@@ -169,6 +176,7 @@ mod candidate_location_tests {
 
     use super::*;
 
+    const STEP: usize = 4;
     const VALUE: i32 = 3;
     const VALUES: Vec<i32> = Vec::new();
 
@@ -185,6 +193,7 @@ mod candidate_location_tests {
         // Range
         let mut locations = CandidateLocations::Range {
             range: 0x2000..0x2100,
+            step: STEP,
             values: VALUES,
         };
         locations.try_compact();
@@ -201,6 +210,7 @@ mod candidate_location_tests {
 
         let mut locations = CandidateLocations::Masked {
             base: 0x2000,
+            step: STEP,
             mask: vec![true, false, false, false],
             values: VALUES,
         };
@@ -256,6 +266,7 @@ mod candidate_location_tests {
             locations,
             CandidateLocations::Masked {
                 base: 0x2000,
+                step: STEP,
                 mask: vec![true, true, false, true, true, true, true, true],
                 values: vec![0, 1, 2, 3, 4, 5, 6, 7]
             }
@@ -301,6 +312,7 @@ mod candidate_location_tests {
     fn iter_range() {
         let locations = CandidateLocations::Range {
             range: 0x2000..0x2010,
+            step: STEP,
             values: VALUES,
         };
         assert_eq!(
@@ -313,6 +325,7 @@ mod candidate_location_tests {
     fn iter_masked() {
         let locations = CandidateLocations::Masked {
             base: 0x2000,
+            step: STEP,
             mask: vec![true, true, false, true],
             values: VALUES,
         };
