@@ -1,7 +1,7 @@
 pub mod scan_meta;
 mod scannable;
 
-use crate::region::{CandidateLocations, Region};
+use crate::region::{LocationsStyle, Region};
 pub use scannable::Scannable;
 use std::{borrow::Borrow, cmp::Ordering};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
@@ -61,11 +61,11 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                     .collect();
                 Region {
                     info,
-                    locations: CandidateLocations::SameValue { locations, value },
+                    locations: LocationsStyle::SameValue { locations, value },
                 }
             }
             Scan::InRange(low, high) => {
-                let mut locations = CandidateLocations::KeyValue(
+                let mut locations = LocationsStyle::KeyValue(
                     memory
                         .windows(SIZE)
                         .enumerate()
@@ -93,7 +93,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
             | Scan::DecreasedBy(_)
             | Scan::IncreasedBy(_) => Region {
                 info,
-                locations: CandidateLocations::Range {
+                locations: LocationsStyle::Range {
                     range: base..base + info.RegionSize,
                     step: SIZE,
                     values: memory
@@ -114,7 +114,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
             // Optimization: unknown scan won't narrow down the region at all.
             Scan::Unknown => region.clone(),
             Scan::Exact(value) => {
-                let locations = CandidateLocations::SameValue {
+                let locations = LocationsStyle::SameValue {
                     locations: region
                         .locations
                         .iter()
@@ -136,7 +136,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                 }
             }
             _ => {
-                let mut locations = CandidateLocations::KeyValue(
+                let mut locations = LocationsStyle::KeyValue(
                     region
                         .locations
                         .iter()

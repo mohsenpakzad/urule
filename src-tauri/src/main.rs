@@ -10,7 +10,7 @@ mod scan;
 use crate::scan::scan_meta::IntoScan;
 use paste::paste;
 use process::{Process, ProcessView};
-use region::{CandidateLocations, Region};
+use region::{LocationsStyle, Region};
 use scan::scan_meta::{ScanInfo, ValueType};
 use std::sync::Mutex;
 use winapi::um::winnt;
@@ -103,7 +103,7 @@ macro_rules! impl_scan {
                 }
 
                 #[tauri::command]
-                fn [<get_last_scan_ $type>](state: tauri::State<AppState>) -> Vec<CandidateLocations<$type_size, $type>> {
+                fn [<get_last_scan_ $type>](state: tauri::State<AppState>) -> Vec<LocationsStyle<$type_size, $type>> {
                     state
                         .[<last_scan_ $type>]
                         .lock()

@@ -10,7 +10,7 @@ pub struct Region<const SIZE: usize, T: Scannable<SIZE>> {
     #[serde(skip_serializing)]
     pub info: MEMORY_BASIC_INFORMATION,
     /// Candidate locations that should be considered during subsequent scans.
-    pub locations: CandidateLocations<SIZE, T>,
+    pub locations: LocationsStyle<SIZE, T>,
 }
 
 unsafe impl<const SIZE: usize, T: Scannable<SIZE>> Send for Region<SIZE, T> {}
@@ -19,12 +19,10 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
     /// Return the value stored at `addr`.
     pub fn value_at(&self, addr: usize) -> T {
         match &self.locations {
-            CandidateLocations::KeyValue(locations) => *locations.get(&addr).unwrap(),
-            CandidateLocations::SameValue { value, .. } => *value,
-            CandidateLocations::Range { values, .. } => {
-                values[addr - self.info.BaseAddress as usize]
-            }
-            CandidateLocations::Offsetted {
+            LocationsStyle::KeyValue(locations) => *locations.get(&addr).unwrap(),
+            LocationsStyle::SameValue { value, .. } => *value,
+            LocationsStyle::Range { values, .. } => values[addr - self.info.BaseAddress as usize],
+            LocationsStyle::Offsetted {
                 values,
                 base,
                 offsets,
@@ -35,7 +33,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                     .unwrap();
                 values[index]
             }
-            CandidateLocations::Masked {
+            LocationsStyle::Masked {
                 values, base, mask, ..
             } => {
                 let index = mask
@@ -50,9 +48,9 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
     }
 }
 
-/// Candidate memory locations for holding our desired value.
+/// Locations style for holding our desired locations.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub enum CandidateLocations<const SIZE: usize, T: Scannable<SIZE>> {
+pub enum LocationsStyle<const SIZE: usize, T: Scannable<SIZE>> {
     /// A key value locations.
     KeyValue(BTreeMap<usize, T>),
     /// A same value locations.
@@ -79,19 +77,19 @@ pub enum CandidateLocations<const SIZE: usize, T: Scannable<SIZE>> {
     },
 }
 
-impl<const SIZE: usize, T: Scannable<SIZE>> CandidateLocations<SIZE, T> {
-    /// Return the amount of candidate locations.
+impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
+    /// Return the amount of locations.
     pub fn len(&self) -> usize {
         match self {
-            CandidateLocations::KeyValue(locations) => locations.len(),
-            CandidateLocations::SameValue { locations, .. } => locations.len(),
-            CandidateLocations::Range { range, .. } => range.len(),
-            CandidateLocations::Offsetted { offsets, .. } => offsets.len(),
-            CandidateLocations::Masked { values, .. } => values.len(),
+            LocationsStyle::KeyValue(locations) => locations.len(),
+            LocationsStyle::SameValue { locations, .. } => locations.len(),
+            LocationsStyle::Range { range, .. } => range.len(),
+            LocationsStyle::Offsetted { offsets, .. } => offsets.len(),
+            LocationsStyle::Masked { values, .. } => values.len(),
         }
     }
 
-    /// Tries to compact the candidate locations into a more efficient representation.
+    /// Tries to compact the style into a more efficient representation.
     pub fn try_compact(&mut self) {
         // TODO
         // let locations = match self {
@@ -152,15 +150,13 @@ impl<const SIZE: usize, T: Scannable<SIZE>> CandidateLocations<SIZE, T> {
     /// Return a iterator over the locations.
     pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = usize> + 'a> {
         match self {
-            CandidateLocations::KeyValue(locations) => {
-                Box::new(locations.keys().into_iter().copied())
-            }
-            CandidateLocations::SameValue { locations, .. } => Box::new(locations.iter().copied()),
-            CandidateLocations::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
-            CandidateLocations::Offsetted { base, offsets, .. } => {
+            LocationsStyle::KeyValue(locations) => Box::new(locations.keys().into_iter().copied()),
+            LocationsStyle::SameValue { locations, .. } => Box::new(locations.iter().copied()),
+            LocationsStyle::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
+            LocationsStyle::Offsetted { base, offsets, .. } => {
                 Box::new(offsets.iter().map(move |&offset| base + offset as usize))
             }
-            CandidateLocations::Masked { base, mask, .. } => Box::new(
+            LocationsStyle::Masked { base, mask, .. } => Box::new(
                 mask.iter()
                     .enumerate()
                     .filter(|(_, &set)| set)
@@ -171,7 +167,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> CandidateLocations<SIZE, T> {
 }
 
 #[cfg(test)]
-mod candidate_location_tests {
+mod location_tests {
     use std::collections::BTreeMap;
 
     use super::*;
@@ -183,52 +179,51 @@ mod candidate_location_tests {
     #[test]
     fn compact_uncompactable() {
         // Same value
-        let mut locations = CandidateLocations::SameValue {
+        let mut locations = LocationsStyle::SameValue {
             locations: vec![0x2000],
             value: VALUE,
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::SameValue { .. }));
+        assert!(matches!(locations, LocationsStyle::SameValue { .. }));
 
         // Range
-        let mut locations = CandidateLocations::Range {
+        let mut locations = LocationsStyle::Range {
             range: 0x2000..0x2100,
             step: STEP,
             values: VALUES,
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::Range { .. }));
+        assert!(matches!(locations, LocationsStyle::Range { .. }));
 
         // Already compacted
-        let mut locations = CandidateLocations::Offsetted {
+        let mut locations = LocationsStyle::Offsetted {
             base: 0x2000,
             offsets: vec![0, 0x20, 0x40],
             values: VALUES,
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::Offsetted { .. }));
+        assert!(matches!(locations, LocationsStyle::Offsetted { .. }));
 
-        let mut locations = CandidateLocations::Masked {
+        let mut locations = LocationsStyle::Masked {
             base: 0x2000,
             step: STEP,
             mask: vec![true, false, false, false],
             values: VALUES,
         };
         locations.try_compact();
-        assert!(matches!(locations, CandidateLocations::Masked { .. }));
+        assert!(matches!(locations, LocationsStyle::Masked { .. }));
     }
 
     #[test]
     fn compact_not_worth() {
         // Too small
-        let mut locations = CandidateLocations::KeyValue(BTreeMap::from([(0x2000, 0)]));
+        let mut locations = LocationsStyle::KeyValue(BTreeMap::from([(0x2000, 0)]));
         let original = locations.clone();
         locations.try_compact();
         assert_eq!(locations, original);
 
         // Too sparse and too large to fit in `Offsetted`.
-        let mut locations =
-            CandidateLocations::KeyValue(BTreeMap::from([(0x2000, 0), (0x42000, 1)]));
+        let mut locations = LocationsStyle::KeyValue(BTreeMap::from([(0x2000, 0), (0x42000, 1)]));
         let original = locations.clone();
         locations.try_compact();
         assert_eq!(locations, original);
@@ -237,11 +232,11 @@ mod candidate_location_tests {
     #[test]
     fn compact_offsetted() {
         let mut locations =
-            CandidateLocations::KeyValue(BTreeMap::from([(0x2000, 0), (0x2004, 1), (0x2040, 2)]));
+            LocationsStyle::KeyValue(BTreeMap::from([(0x2000, 0), (0x2004, 1), (0x2040, 2)]));
         locations.try_compact();
         assert_eq!(
             locations,
-            CandidateLocations::Offsetted {
+            LocationsStyle::Offsetted {
                 base: 0x2000,
                 offsets: vec![0x0000, 0x0004, 0x0040],
                 values: vec![0, 1, 2]
@@ -251,7 +246,7 @@ mod candidate_location_tests {
 
     #[test]
     fn compact_masked() {
-        let mut locations = CandidateLocations::KeyValue(BTreeMap::from([
+        let mut locations = LocationsStyle::KeyValue(BTreeMap::from([
             (0x2000, 0),
             (0x2004, 1),
             (0x200c, 2),
@@ -264,7 +259,7 @@ mod candidate_location_tests {
         locations.try_compact();
         assert_eq!(
             locations,
-            CandidateLocations::Masked {
+            LocationsStyle::Masked {
                 base: 0x2000,
                 step: STEP,
                 mask: vec![true, true, false, true, true, true, true, true],
@@ -275,7 +270,7 @@ mod candidate_location_tests {
 
     #[test]
     fn iter_same_value() {
-        let locations = CandidateLocations::SameValue {
+        let locations = LocationsStyle::SameValue {
             locations: vec![0x2000, 0x2004, 0x200c],
             value: VALUE,
         };
@@ -288,7 +283,7 @@ mod candidate_location_tests {
     #[test]
     fn iter_key_value() {
         let locations =
-            CandidateLocations::KeyValue(BTreeMap::from([(0x2000, 0), (0x2004, 1), (0x200c, 2)]));
+            LocationsStyle::KeyValue(BTreeMap::from([(0x2000, 0), (0x2004, 1), (0x200c, 2)]));
         assert_eq!(
             locations.iter().collect::<Vec<_>>(),
             vec![0x2000, 0x2004, 0x200c],
@@ -297,7 +292,7 @@ mod candidate_location_tests {
 
     #[test]
     fn iter_offsetted() {
-        let locations = CandidateLocations::Offsetted {
+        let locations = LocationsStyle::Offsetted {
             base: 0x2000,
             offsets: vec![0x0000, 0x0004, 0x000c],
             values: VALUES,
@@ -310,7 +305,7 @@ mod candidate_location_tests {
 
     #[test]
     fn iter_range() {
-        let locations = CandidateLocations::Range {
+        let locations = LocationsStyle::Range {
             range: 0x2000..0x2010,
             step: STEP,
             values: VALUES,
@@ -323,7 +318,7 @@ mod candidate_location_tests {
 
     #[test]
     fn iter_masked() {
-        let locations = CandidateLocations::Masked {
+        let locations = LocationsStyle::Masked {
             base: 0x2000,
             step: STEP,
             mask: vec![true, true, false, true],
