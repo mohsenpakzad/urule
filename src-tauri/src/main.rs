@@ -60,10 +60,6 @@ macro_rules! impl_scan {
                         $([<last_scan_ $type>]: Mutex::new(Vec::new()),)+
                     }
                 }
-
-                fn clear(&mut self) {
-                    $(self.[<last_scan_ $type>].lock().unwrap().clear();)+
-                }
             }
 
             fn main() {
@@ -72,6 +68,7 @@ macro_rules! impl_scan {
                     .invoke_handler(tauri::generate_handler![
                         get_processes,
                         get_opened_process,
+                        clear_last_scan,
                         $(
                             [<write_opened_process_memory_ $type>],
                             [<get_last_scan_ $type>],
@@ -81,6 +78,11 @@ macro_rules! impl_scan {
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
+            }
+
+            #[tauri::command]
+            fn clear_last_scan(state: tauri::State<AppState>) {
+                $(state.[<last_scan_ $type>].lock().unwrap().clear();)+
             }
 
             $(
