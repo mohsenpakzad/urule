@@ -89,6 +89,52 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         }
     }
 
+    /// Return the locations based on different location styles.
+    pub fn into_locations(self) -> Vec<Location<SIZE, T>> {
+        match self {
+            LocationsStyle::KeyValue(locations) => locations
+                .into_iter()
+                .map(|(address, value)| Location { address, value })
+                .collect(),
+            LocationsStyle::SameValue { locations, value } => locations
+                .into_iter()
+                .map(|address| Location { address, value })
+                .collect(),
+            LocationsStyle::Range { range, values, .. } => values
+                .into_iter()
+                .enumerate()
+                .map(|(index, value)| Location {
+                    address: range.start + index * SIZE,
+                    value,
+                })
+                .collect(),
+            LocationsStyle::Offsetted {
+                base,
+                offsets,
+                values,
+            } => values
+                .into_iter()
+                .enumerate()
+                .map(|(index, value)| Location {
+                    address: base + offsets[index] as usize,
+                    value,
+                })
+                .collect(),
+            LocationsStyle::Masked {
+                base, mask, values, ..
+            } => mask
+                .into_iter()
+                .enumerate()
+                .filter(|(_, m)| *m)
+                .zip(values)
+                .map(|((index, _), value)| Location {
+                    address: base + index * SIZE,
+                    value,
+                })
+                .collect(),
+        }
+    }
+
     /// Tries to compact the style into a more efficient representation.
     pub fn try_compact(&mut self) {
         // TODO
@@ -164,6 +210,15 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             ),
         }
     }
+}
+
+/// Representation of single location in memory.
+#[derive(Serialize)]
+pub struct Location<const SIZE: usize, T: Scannable<SIZE>> {
+    /// Address of the location.
+    address: usize,
+    /// Value of the location.
+    value: T,
 }
 
 #[cfg(test)]
