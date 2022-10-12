@@ -27,8 +27,14 @@ export function useUruleCore() {
     );
   }
 
-  async function getLastScan() {
-    return await invoke<Location[]>(`get_last_scan_${currentValueType}`);
+  async function getLastScan(limit: number, offset: number) {
+    return await invoke<[number, Location[]]>(
+      `get_last_scan_${currentValueType}`,
+      {
+        limit,
+        offset,
+      }
+    );
   }
 
   async function firstScan(

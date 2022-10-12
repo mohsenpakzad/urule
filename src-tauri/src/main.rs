@@ -103,15 +103,25 @@ macro_rules! impl_scan {
                 }
 
                 #[tauri::command]
-                fn [<get_last_scan_ $type>](state: tauri::State<AppState>) -> Vec<Location<$type_size, $type>> {
-                    state
-                        .[<last_scan_ $type>]
-                        .lock()
-                        .unwrap()
-                        .clone()
+                fn [<get_last_scan_ $type>](
+                    limit: usize,
+                    offset: usize,
+                    state: tauri::State<AppState>,
+                ) -> (usize, Vec<Location<$type_size, $type>>) {
+                    let regions = state.[<last_scan_ $type>].lock().unwrap().clone();
+
+                    let total_locations_number = regions
+                        .iter()
+                        .map(|region| region.locations.len())
+                        .sum::<usize>();
+                    let extracted_locations = regions
                         .into_iter()
                         .flat_map(|region| region.locations.into_locations())
-                        .collect()
+                        .skip(offset)
+                        .take(limit)
+                        .collect();
+
+                    (total_locations_number, extracted_locations)
                 }
 
                 #[tauri::command]
