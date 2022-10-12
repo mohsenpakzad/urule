@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useStore } from 'stores/main';
-import { QTableColumn, useQuasar } from 'quasar';
+import { QTableColumn, useQuasar, ValidationRule } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
@@ -60,28 +60,29 @@ const locationsLoading = ref(false);
 const changeValueDialog = ref<boolean>(false);
 const changeValueDialogInput = ref<string>('');
 
-function baseScanValueRules() {
-  return [
-    rules.ruleRequired,
-    scanData.valueType?.format,
-    scanData.valueType
-      ? rules.ruleBetween(scanData.valueType.min, scanData.valueType.max)
-      : undefined,
-  ];
+function baseScanValueRules(): ValidationRule[] {
+  if (scanData.valueType) {
+    return [
+      rules.ruleRequired,
+      scanData.valueType.format,
+      rules.ruleBetween(scanData.valueType.min, scanData.valueType.max),
+    ];
+  }
+  return [];
 }
 
 const scanValueRules = computed(() => baseScanValueRules());
-const scanValueMinRangeRules = computed(() => {
+const scanValueMinRangeRules = computed((): ValidationRule[] => {
   if (scanData.value.Range) {
     const max = parseFloat(scanData.value.Range.end);
-    return [...baseScanValueRules(), max ? rules.ruleSmaller(max) : undefined];
+    if (max) return [...baseScanValueRules(), rules.ruleSmaller(max)];
   }
   return [];
 });
-const scanValueMaxRangeRules = computed(() => {
+const scanValueMaxRangeRules = computed((): ValidationRule[] => {
   if (scanData.value.Range) {
     const min = parseFloat(scanData.value.Range.start);
-    return [...baseScanValueRules(), min ? rules.ruleBigger(min) : undefined];
+    if (min) return [...baseScanValueRules(), rules.ruleBigger(min)];
   }
   return [];
 });
