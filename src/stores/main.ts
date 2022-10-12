@@ -140,6 +140,11 @@ export const useStore = defineStore('main', () => {
     },
   });
   const scanForm = ref<QForm>();
+  function resetUnknownScan() {
+    if (scanData.scanType?.value === ScanType.Unknown) {
+      scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
+    }
+  }
   function resetScanData() {
     if (
       scanData.scanType?.value != ScanType.Exact &&
@@ -197,6 +202,7 @@ export const useStore = defineStore('main', () => {
     scanTypeOptionsRequiredInputs,
 
     // functions
+    resetUnknownScan,
     resetScanData,
   };
 });

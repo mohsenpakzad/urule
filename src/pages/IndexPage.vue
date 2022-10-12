@@ -20,6 +20,7 @@ const {
 
   scanData,
 
+  resetUnknownScan,
   resetScanData,
 } = store;
 
@@ -128,6 +129,8 @@ async function firstScan() {
   await fetchLocations();
 
   scanState.value = ScanState.AfterInitialScan;
+  resetUnknownScan();
+
   q.loading.hide();
 }
 
