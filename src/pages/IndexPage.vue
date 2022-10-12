@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useStore } from 'stores/main';
-import { useQuasar } from 'quasar';
+import { QTableColumn, useQuasar } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
@@ -35,7 +35,7 @@ const {
   selectedLocations,
 } = storeToRefs(store);
 
-const locationTableColumns = [
+const locationTableColumns = <QTableColumn[]>[
   {
     name: 'address',
     required: true,
@@ -308,7 +308,7 @@ function writeMemory() {
         dense
         :rows="locations"
         :columns="locationTableColumns"
-        rows-per-page-options="0"
+        :rows-per-page-options="[0]"
         row-key="address"
         selection="multiple"
         v-model:selected="selectedLocations"

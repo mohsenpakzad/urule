@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'stores/main';
+import { QTableColumn } from 'quasar';
 import { onStartTyping, useIntervalFn } from '@vueuse/core';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
@@ -12,7 +13,7 @@ const router = useRouter();
 const uruleCore = useUruleCore();
 const formatter = useFormatter();
 
-const processListColumns = [
+const processListColumns = <QTableColumn[]>[
   {
     name: 'name',
     required: true,
@@ -75,7 +76,7 @@ onMounted(async () => {
       dense
       :rows="processList"
       :columns="processListColumns"
-      rows-per-page-options="0"
+      :rows-per-page-options="[0]"
       :filter="processesFilter"
       row-key="pid"
       selection="single"
