@@ -180,4 +180,4 @@ macro_rules! impl_scan {
     }
 }
 
-impl_scan!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8);
+impl_scan!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8, f32: 4, f64: 8);
