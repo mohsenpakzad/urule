@@ -53,4 +53,58 @@ macro_rules! impl_scannable_for_int {
     };
 }
 
+macro_rules! impl_scannable_for_float {
+    ( $( $type:ty : $type_size:expr ; $int_type:ty ),+ ) => {
+        $(
+            impl Scannable<$type_size> for $type {
+
+                fn from_bytes<T: Scannable<$type_size>>(bytes: [u8; $type_size]) -> T {
+                    // SAFETY: size of input and output is always the same
+                    unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }
+                }
+
+                fn to_bytes(self) -> [u8; $type_size] {
+                    self.to_ne_bytes()
+                }
+
+                 fn eq(&self, bytes: [u8; $type_size]) -> bool {
+                    /// Let's visualize this mask with a f16.
+                    /// This type has 16 bits, 1 for sign, 5 for exponent, and 10 for the mantissa:
+                    /// S EEEEE MMMMMMMMMM
+
+                    // If we substitute the constant with the numeric value and operate:
+                    /// !((1 << (10 / 2)) - 1)
+                    /// !((1 << 5) - 1)
+                    /// !(0b00000000_00100000 - 1)
+                    /// !(0b00000000_00011111)
+                    /// 0b11111111_11100000
+
+                    /// So effectively, half of the mantisssa bit will be masked to 0.
+                    /// For the f16 example, this makes us lose 5 bits of precision.
+                    /// Comparing two floating point values with their last five bits
+                    /// truncated is equivalent to checking if they are "roughly equal"!
+                    const MASK: $int_type = !((1 << (<$type>::MANTISSA_DIGITS / 2)) - 1);
+
+                    let other = <$type>::from_ne_bytes(bytes);
+
+                    let this = <$type>::from_bits(self.to_bits() & MASK);
+                    let other = <$type>::from_bits(other.to_bits() & MASK);
+
+                    this == other
+                }
+
+                 fn cmp(&self, bytes: [u8; $type_size]) -> Ordering {
+                    let other = <$type>::from_ne_bytes(bytes);
+                    self.total_cmp(&other)
+                }
+
+                fn sub(&self, bytes: [u8; $type_size]) -> [u8; $type_size] {
+                    let other = <$type>::from_ne_bytes(bytes);
+                    (*self - other).to_ne_bytes()
+                }
+            }
+        )+
+    };
+}
+
 impl_scannable_for_int!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8);
