@@ -33,6 +33,7 @@ const {
 
   locations,
   selectedLocations,
+  locationsPagination,
 } = storeToRefs(store);
 
 const locationTableColumns = <QTableColumn[]>[
@@ -53,6 +54,8 @@ const locationTableColumns = <QTableColumn[]>[
     field: (p: Location) => p.value,
   },
 ];
+
+const locationsLoading = ref(false);
 
 const changeValueDialog = ref<boolean>(false);
 const changeValueDialogInput = ref<string>('');
@@ -83,6 +86,32 @@ const scanValueMaxRangeRules = computed(() => {
   return [];
 });
 
+async function onFetchLocationsRequest({
+  pagination,
+}: {
+  pagination: {
+    page: number;
+  };
+}) {
+  const { page } = pagination;
+  locationsPagination.value.page = page;
+  await fetchLocations();
+}
+
+async function fetchLocations() {
+  locationsLoading.value = true;
+  const { page, rowsPerPage } = locationsPagination.value;
+
+  const [totalLocationsNumber, newLocations] = await uruleCore.getLastScan(
+    locationsPagination.value.rowsPerPage,
+    (page - 1) * rowsPerPage
+  );
+  locations.value.splice(0, locations.value.length, ...newLocations);
+  locationsPagination.value.rowsNumber = totalLocationsNumber;
+
+  locationsLoading.value = false;
+}
+
 async function firstScan() {
   if (!store.openedProcess || !(await scanForm.value?.validate())) return;
   q.loading.show();
@@ -95,7 +124,7 @@ async function firstScan() {
       value: scanData.value,
     }
   );
-  locations.value = await uruleCore.getLastScan();
+  await fetchLocations();
 
   scanState.value = ScanState.AfterInitialScan;
   q.loading.hide();
@@ -109,7 +138,7 @@ async function nextScan() {
     typ: scanData.scanType!.value,
     value: scanData.value,
   });
-  locations.value = await uruleCore.getLastScan();
+  await fetchLocations();
 
   q.loading.hide();
 }
@@ -312,7 +341,15 @@ function writeMemory() {
         row-key="address"
         selection="multiple"
         v-model:selected="selectedLocations"
+        v-model:pagination="locationsPagination"
+        @request="onFetchLocationsRequest"
+        :loading="locationsLoading"
       >
+        <template v-slot:loading>
+          <q-inner-loading showing>
+            <q-spinner-clock size="50" />
+          </q-inner-loading>
+        </template>
         <template v-slot:top-right>
           <q-btn
             v-if="selectedLocations.length > 0"

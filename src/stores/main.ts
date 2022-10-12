@@ -152,9 +152,13 @@ export const useStore = defineStore('main', () => {
       Range: { start: '', end: '' },
     };
   }
-
   const locations = ref<Location[]>([]);
   const selectedLocations = ref<Location[]>([]);
+  const locationsPagination = ref({
+    rowsPerPage: 2048,
+    rowsNumber: 0,
+    page: 1,
+  });
 
   const scanTypeOptions = computed(() => {
     return scanTypes.filter((e) => e.availability & scanState.value);
@@ -186,6 +190,7 @@ export const useStore = defineStore('main', () => {
 
     locations,
     selectedLocations,
+    locationsPagination,
 
     //  computed
     scanTypeOptions,
