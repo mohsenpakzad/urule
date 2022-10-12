@@ -108,3 +108,18 @@ macro_rules! impl_scannable_for_float {
 }
 
 impl_scannable_for_int!(i8: 1, u8: 1, i16: 2, u16:2 , i32: 4, u32: 4, i64: 8, u64: 8);
+impl_scannable_for_float!(f32: 4; u32, f64: 8; u64);
+
+#[cfg(test)]
+mod scannable_tests {
+    use super::*;
+
+    #[test]
+    fn f32_roughly_eq() {
+        let left = 0.25f32;
+        let right = 0.25000123f32;
+        assert_ne!(left, right);
+        let right = right.to_bytes();
+        assert!(Scannable::eq(&left, right));
+    }
+}
