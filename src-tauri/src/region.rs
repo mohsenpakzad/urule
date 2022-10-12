@@ -1,6 +1,6 @@
 use crate::scan::Scannable;
 use serde::Serialize;
-use std::{collections::BTreeMap, ops::Range};
+use std::{collections::BTreeMap, mem, ops::Range};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
 
 /// A memory region.
@@ -148,60 +148,61 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
 
     /// Tries to compact the style into a more efficient representation.
     pub fn try_compact(&mut self) {
-        // TODO
-        // let locations = match self {
-        //     CandidateLocations::KeyValue(locations) if locations.len() > 1 => mem::take(locations),
-        //     _ => return,
-        // };
+        let locations = match self {
+            LocationsStyle::KeyValue(locations) if locations.len() > 1 => mem::take(locations),
+            _ => return,
+        };
 
-        // // It is assumed that locations are always sorted in ascending order.
-        // let &low = locations.keys().min().unwrap();
-        // let &high = locations.keys().max().unwrap();
-        // let size = high - low;
+        let &low = locations.keys().min().unwrap();
+        let &high = locations.keys().max().unwrap();
+        let addressing_range = high - low;
+        let address_number = addressing_range / SIZE;
 
-        // // Can the entire region be represented with a base and 16-bit offsets?
-        // // And is it more worth than using a single byte per 4-byte aligned location?
-        // if size <= u16::MAX as _ && locations.len() * mem::size_of::<u16>() < size / 4 {
-        //     // We will always store a `0` offset, but that's fine, it makes iteration easier and
-        //     // getting rid of it would only gain usu 2 bytes.
-        //     *self = CandidateLocations::Offsetted {
-        //         base: low,
-        //         offsets: locations
-        //             .keys()
-        //             .map(|&loc| (loc - low).try_into().unwrap())
-        //             .collect(),
-        //         values: locations.into_values().collect(),
-        //     };
-        //     return;
-        // }
+        // Would using a byte-mask for the entire region be more worth it?
+        // Base(usize) + address_number * mask(bool) < locations.len() * address(usize)
+        if mem::size_of::<usize>() + address_number * mem::size_of::<bool>()
+            < locations.len() * mem::size_of::<usize>()
+        {
+            let mut addresses = locations.keys();
+            let mut next_set = addresses.next();
+            *self = LocationsStyle::Masked {
+                base: low,
+                mask: (low..high)
+                    .step_by(SIZE)
+                    .map(|addr| {
+                        if Some(&addr) == next_set {
+                            next_set = addresses.next();
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .collect(),
+                values: locations.into_values().collect(),
+            };
+            return;
+        }
 
-        // // // Would using a byte-mask for the entire region be more worth it?
-        // if size / 4 < locations.len() * mem::size_of::<usize>() {
-        //     assert_eq!(low % 4, 0);
+        // Can the entire region be represented with a base and 16-bit offsets?
+        // And because we ignore locations.len() == 1 cases, if addressing_range is <= u16::MAX
+        // Base(usize) + locations.len() * address(u16) < locations.len() * address(usize) is always true
+        if addressing_range <= u16::MAX as _ {
+            // We will always store a `0` offset, but that's fine, it makes iteration easier and
+            // getting rid of it would only gain usu 2 bytes.
+            *self = LocationsStyle::Offsetted {
+                base: low,
+                offsets: locations
+                    .keys()
+                    .map(|&loc| (loc - low).try_into().unwrap())
+                    .collect(),
+                values: locations.into_values().collect(),
+            };
+            return;
+        }
 
-        //     let mut addresses = locations.keys();
-        //     let mut next_set = addresses.next();
-        //     *self = CandidateLocations::Masked {
-        //         base: low,
-        //         mask: (low..high)
-        //             .step_by(SIZE)
-        //             .map(|addr| {
-        //                 if Some(&addr) == next_set {
-        //                     next_set = addresses.next();
-        //                     true
-        //                 } else {
-        //                     false
-        //                 }
-        //             })
-        //             .collect(),
-        //         values: locations.into_values().collect(),
-        //     };
-        //     return;
-        // }
-
-        // // Neither of the attempts is really better than just storing the locations.
-        // // Revert to using a discrete representation.
-        // *self = CandidateLocations::KeyValue(locations);
+        // Neither of the attempts is really better than just storing the locations.
+        // Revert to using a discrete representation.
+        *self = LocationsStyle::KeyValue(locations);
     }
 }
 
