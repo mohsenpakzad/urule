@@ -330,7 +330,7 @@ function writeMemory() {
 
       <q-table
         class="q-pt-sm"
-        style="height: 55vh"
+        style="height: 50vh"
         title="Found Locations"
         bordered
         flat
