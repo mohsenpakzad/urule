@@ -76,14 +76,20 @@ const scanValueRules = computed(() => baseScanValueRules());
 const scanValueMinRangeRules = computed((): ValidationRule[] => {
   if (scanData.value.Range) {
     const max = parseFloat(scanData.value.Range.end);
-    if (max) return [...baseScanValueRules(), rules.ruleSmaller(max)];
+    const baseRules = baseScanValueRules();
+
+    if (max) return [...baseRules, rules.ruleSmaller(max)];
+    return baseRules;
   }
   return [];
 });
 const scanValueMaxRangeRules = computed((): ValidationRule[] => {
   if (scanData.value.Range) {
     const min = parseFloat(scanData.value.Range.start);
-    if (min) return [...baseScanValueRules(), rules.ruleBigger(min)];
+    const baseRules = baseScanValueRules();
+
+    if (min) return [...baseRules, rules.ruleBigger(min)];
+    return baseRules;
   }
   return [];
 });
