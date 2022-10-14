@@ -4,10 +4,9 @@ use std::{collections::BTreeMap, mem, ops::Range};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
 
 /// A memory region.
-#[derive(Clone, Serialize)]
+#[derive(Clone)]
 pub struct Region<const SIZE: usize, T: Scannable<SIZE>> {
     /// The raw information about this memory region.
-    #[serde(skip_serializing)]
     pub info: MEMORY_BASIC_INFORMATION,
     /// Candidate locations that should be considered during subsequent scans.
     pub locations: LocationsStyle<SIZE, T>,
@@ -60,7 +59,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
 }
 
 /// Locations style for holding our desired locations.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LocationsStyle<const SIZE: usize, T: Scannable<SIZE>> {
     /// A key value locations.
     KeyValue(BTreeMap<usize, T>),
