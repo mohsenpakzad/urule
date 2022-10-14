@@ -39,7 +39,7 @@ const searchInput = ref<HTMLInputElement | null>(null);
 
 const processListLoading = ref<boolean>(true);
 
-function getSelectedString() {
+function getSelectedProcessLabel() {
   return `${formatter.formatProcess(selectedProcess.value[0])} selected.`;
 }
 
@@ -82,7 +82,7 @@ onMounted(async () => {
       selection="single"
       v-model:selected="selectedProcess"
       :pagination="{ sortBy: 'name' }"
-      :selected-rows-label="getSelectedString"
+      :selected-rows-label="getSelectedProcessLabel"
       :loading="processListLoading"
     >
       <template v-slot:top-right>
