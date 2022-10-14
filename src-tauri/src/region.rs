@@ -21,7 +21,10 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
         match &self.locations {
             LocationsStyle::KeyValue(locations) => *locations.get(&addr).unwrap(),
             LocationsStyle::SameValue { value, .. } => *value,
-            LocationsStyle::Range { values, .. } => values[addr - self.info.BaseAddress as usize],
+            LocationsStyle::Range { values, .. } => {
+                let index = (addr - self.info.BaseAddress as usize) / SIZE;
+                values[index]
+            }
             LocationsStyle::Offsetted {
                 values,
                 base,
@@ -39,8 +42,16 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                 let index = mask
                     .iter()
                     .enumerate()
-                    .map(|(index, mask)| (base + index * SIZE, mask))
-                    .position(|(address, &mask)| mask && addr == address)
+                    .filter_map(
+                        |(index, &set)| {
+                            if set {
+                                Some(base + index * SIZE)
+                            } else {
+                                None
+                            }
+                        },
+                    )
+                    .position(|address| addr == address)
                     .unwrap();
                 values[index]
             }
