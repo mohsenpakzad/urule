@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useStore } from 'stores/main';
-import { QTableColumn, useQuasar, ValidationRule } from 'quasar';
+import { QForm, QTableColumn, useQuasar, ValidationRule } from 'quasar';
 import { useUruleCore } from 'src/composables/useUruleCore';
 import { useFormatter } from 'src/composables/useFormatter';
 import { useRules } from 'src/composables/useRules';
@@ -58,6 +58,7 @@ const locationTableColumns = <QTableColumn[]>[
 
 const locationsLoading = ref(false);
 
+const changeValueForm = ref<QForm>();
 const changeValueDialog = ref<boolean>(false);
 const changeValueDialogInput = ref<string>('');
 
@@ -168,7 +169,9 @@ async function newScan() {
   scanState.value = ScanState.BeforeInitialScan;
 }
 
-function writeMemory() {
+async function writeMemory() {
+  if (!(await changeValueForm.value?.validate())) return;
+
   selectedLocations.value.forEach(async (location) => {
     const value = parseFloat(changeValueDialogInput.value);
     const writtenBytes = await uruleCore.writeOpenedProcessMemory(
@@ -184,6 +187,7 @@ function writeMemory() {
   });
 
   changeValueDialogInput.value = '';
+  changeValueDialog.value = false;
 }
 </script>
 
@@ -378,13 +382,20 @@ function writeMemory() {
               </q-card-section>
 
               <q-card-section class="q-pt-none">
-                <!-- TODO: add more validation -->
-                <q-input
-                  dense
-                  v-model="changeValueDialogInput"
-                  autofocus
-                  :rules="[rules.ruleRequired, rules.ruleInteger]"
-                />
+                <q-form ref="changeValueForm">
+                  <q-input
+                    dense
+                    v-model="changeValueDialogInput"
+                    autofocus
+                    :rules="scanValueRules"
+                    :hint="
+                  formatter.formatMinMaxValue(
+                    scanData.valueType!.min,
+                    scanData.valueType!.max
+                  )
+                  "
+                  />
+                </q-form>
               </q-card-section>
 
               <q-card-actions align="right" class="text-primary">
@@ -394,7 +405,7 @@ function writeMemory() {
                   v-close-popup
                   @click="changeValueDialogInput = ''"
                 />
-                <q-btn flat label="Save" v-close-popup @click="writeMemory" />
+                <q-btn flat label="Save" @click="writeMemory" />
               </q-card-actions>
             </q-card>
           </q-dialog>
