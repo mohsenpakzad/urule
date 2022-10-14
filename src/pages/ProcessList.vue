@@ -42,6 +42,14 @@ const processListLoading = ref<boolean>(true);
 function getSelectedProcessLabel() {
   return `${formatter.formatProcess(selectedProcess.value[0])} selected.`;
 }
+// Single selection logic
+function onProcessSelection({} = {}, row: Process) {
+  if (selectedProcess.value.includes(row)) {
+    selectedProcess.value = [];
+  } else {
+    selectedProcess.value = [row];
+  }
+}
 
 async function openProcess() {
   if (selectedProcess.value.length < 1) return;
@@ -84,6 +92,7 @@ onMounted(async () => {
       :pagination="{ sortBy: 'name' }"
       :selected-rows-label="getSelectedProcessLabel"
       :loading="processListLoading"
+      @row-click="onProcessSelection"
     >
       <template v-slot:top-right>
         <q-input

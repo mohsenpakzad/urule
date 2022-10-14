@@ -62,6 +62,17 @@ const changeValueForm = ref<QForm>();
 const changeValueDialog = ref<boolean>(false);
 const changeValueDialogInput = ref<string>('');
 
+// Multiple selection logic
+function onLocationsSelection({} = {}, row: Location) {
+  if (selectedLocations.value.includes(row)) {
+    selectedLocations.value = selectedLocations.value.filter(
+      (location) => location !== row
+    );
+  } else {
+    selectedLocations.value.push(row);
+  }
+}
+
 function baseScanValueRules(): ValidationRule[] {
   if (scanData.valueType) {
     return [
@@ -364,6 +375,7 @@ async function writeMemory() {
           (numberOfRows) =>
             `${numberOfRows} location${numberOfRows > 1 ? 's' : ''} selected.`
         "
+        @row-click="onLocationsSelection"
       >
         <template v-slot:loading>
           <q-inner-loading showing>
