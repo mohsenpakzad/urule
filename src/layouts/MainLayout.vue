@@ -11,29 +11,25 @@ const toolbarButtons = computed(() => {
         {
           label: 'Process list',
           icon: 'apps',
-          click: async () => await router.push('/process-list')
-        }
+          click: async () => await router.push('/process-list'),
+        },
       ];
     default:
       return [
         {
           label: 'Back',
           icon: 'keyboard_return',
-          click: async () => await router.back()
-        }
+          click: async () => await router.back(),
+        },
       ];
   }
-})
+});
 </script>
 
 <template>
   <q-layout view="hHh lpR fFf">
-
-    <q-header
-      class="bg-primary text-secondary q-py-sm"
-    >
+    <q-header class="bg-primary text-secondary q-py-sm">
       <q-toolbar>
-
         <q-btn
           v-for="(button, i) in toolbarButtons"
           :key="i"
@@ -45,10 +41,10 @@ const toolbarButtons = computed(() => {
           text-color="primary"
         ></q-btn>
 
-        <q-space/>
+        <q-space />
 
-        <q-avatar>
-          <img src="../../src-tauri/icons/icon.ico">
+        <q-avatar square>
+          <img src="../../src-tauri/icons/icon.ico" />
         </q-avatar>
 
         <q-toolbar-title shrink>Urule</q-toolbar-title>
@@ -58,6 +54,5 @@ const toolbarButtons = computed(() => {
     <q-page-container>
       <router-view />
     </q-page-container>
-
   </q-layout>
 </template>
