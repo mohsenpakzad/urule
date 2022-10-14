@@ -7,6 +7,10 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
+        component: () => import('pages/SplashScreen.vue'),
+      },
+      {
+        path: '/home',
         component: () => import('pages/IndexPage.vue'),
       },
       {

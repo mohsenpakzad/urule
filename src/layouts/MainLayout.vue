@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
+const route = useRoute();
 
 const toolbarButtons = computed(() => {
   switch (router.currentRoute.value.path) {
-    case '/':
+    case '/home':
       return [
         {
           label: 'Process list',
@@ -14,7 +15,7 @@ const toolbarButtons = computed(() => {
           click: async () => await router.push('/process-list'),
         },
       ];
-    default:
+    case '/process-list':
       return [
         {
           label: 'Back',
@@ -22,13 +23,18 @@ const toolbarButtons = computed(() => {
           click: async () => await router.back(),
         },
       ];
+    default:
+      return [];
   }
 });
 </script>
 
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header class="bg-primary text-secondary q-py-sm">
+    <q-header
+      v-if="route.path !== '/'"
+      class="bg-primary text-secondary q-py-sm"
+    >
       <q-toolbar>
         <q-btn
           v-for="(button, i) in toolbarButtons"
