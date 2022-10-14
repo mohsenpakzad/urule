@@ -151,6 +151,7 @@ async function nextScan() {
   });
   await fetchLocations();
 
+  selectedLocations.value = [];
   q.loading.hide();
 }
 
