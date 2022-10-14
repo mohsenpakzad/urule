@@ -136,7 +136,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             LocationsStyle::Masked { base, mask, values } => mask
                 .into_iter()
                 .enumerate()
-                .filter_map(|(index, m)| if m { Some(index) } else { None })
+                .filter_map(|(index, set)| if set { Some(index) } else { None })
                 .zip(values)
                 .map(|(index, value)| Location {
                     address: base + index * SIZE,
