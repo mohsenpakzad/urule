@@ -160,7 +160,7 @@ export const useStore = defineStore('main', () => {
   const locations = ref<Location[]>([]);
   const selectedLocations = ref<Location[]>([]);
   const locationsPagination = ref({
-    rowsPerPage: 2048,
+    rowsPerPage: 512,
     rowsNumber: 0,
     page: 1,
   });
