@@ -359,6 +359,11 @@ async function writeMemory() {
         v-model:pagination="locationsPagination"
         @request="onFetchLocationsRequest"
         :loading="locationsLoading"
+        no-data-label="No locations found"
+        :selected-rows-label="
+          (numberOfRows) =>
+            `${numberOfRows} location${numberOfRows > 1 ? 's' : ''} selected.`
+        "
       >
         <template v-slot:loading>
           <q-inner-loading showing>
