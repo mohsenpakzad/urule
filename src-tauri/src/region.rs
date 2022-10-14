@@ -93,12 +93,15 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             LocationsStyle::Offsetted { base, offsets, .. } => {
                 Box::new(offsets.iter().map(move |&offset| base + offset as usize))
             }
-            LocationsStyle::Masked { base, mask, .. } => Box::new(
-                mask.iter()
-                    .enumerate()
-                    .filter(|(_, &set)| set)
-                    .map(move |(i, _)| base + i * SIZE),
-            ),
+            LocationsStyle::Masked { base, mask, .. } => {
+                Box::new(mask.iter().enumerate().filter_map(move |(index, &set)| {
+                    if set {
+                        Some(base + index * SIZE)
+                    } else {
+                        None
+                    }
+                }))
+            }
         }
     }
 
