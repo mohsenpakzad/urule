@@ -21,6 +21,12 @@ tauri = { version = "1.0.5", features = ["api-all"] }
 
 winapi = { version = "0.3.9", features = ["psapi", "processthreadsapi", "handleapi", "memoryapi"] }
 paste = "1.0.9"
+log = "0.4"
+
+[dependencies.tauri-plugin-log]
+git = "https://github.com/tauri-apps/tauri-plugin-log"
+branch = "dev"
+features = ["colored"]
 
 [features]
 # by default Tauri runs in production mode

@@ -13,6 +13,10 @@ use process::{Process, ProcessView};
 use region::{Location, Region};
 use scan::scan_meta::{ScanInfo, ValueType};
 use std::sync::Mutex;
+use tauri_plugin_log::{
+    fern::colors::{Color, ColoredLevelConfig},
+    LoggerBuilder,
+};
 use winapi::um::winnt;
 
 #[tauri::command]
@@ -76,6 +80,11 @@ macro_rules! impl_scan {
                             [<next_scan_ $type>],
                         )+
                     ])
+                    .plugin(
+                        LoggerBuilder::default()
+                        .with_colors(ColoredLevelConfig::default().info(Color::Cyan))
+                        .build(),
+                    )
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
             }
