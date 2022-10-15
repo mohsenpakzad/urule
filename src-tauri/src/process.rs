@@ -1,5 +1,6 @@
 use crate::region::Region;
 use crate::scan::{Scan, Scannable};
+use log::warn;
 use serde::Serialize;
 use std::mem::{self, MaybeUninit};
 use std::os::windows::io::{HandleOrNull, NullHandleError, OwnedHandle};
@@ -191,7 +192,7 @@ impl Process {
                 |region| match self.read_memory(region.BaseAddress as _, region.RegionSize) {
                     Ok(memory) => Some(scan.run(region.clone(), memory)),
                     Err(err) => {
-                        eprintln!(
+                        warn!(
                             "Failed to read {} bytes at {:?}: {}",
                             region.RegionSize, region.BaseAddress, err,
                         );
@@ -214,7 +215,7 @@ impl Process {
                 match self.read_memory(region.info.BaseAddress as _, region.info.RegionSize) {
                     Ok(memory) => Some(scan.rerun(region, memory)),
                     Err(err) => {
-                        eprintln!(
+                        warn!(
                             "Failed to read {} bytes at {:?}: {}",
                             region.info.RegionSize, region.info.BaseAddress, err,
                         );

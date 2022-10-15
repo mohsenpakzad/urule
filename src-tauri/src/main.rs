@@ -8,6 +8,7 @@ mod region;
 mod scan;
 
 use crate::scan::scan_meta::IntoScan;
+use log::info;
 use paste::paste;
 use process::{Process, ProcessView};
 use region::{Location, Region};
@@ -135,9 +136,11 @@ macro_rules! impl_scan {
 
                 #[tauri::command]
                 fn [<first_scan_ $type>](pid: u32, value_type: ValueType, scan_info: ScanInfo, state: tauri::State<AppState>) {
+                    info!("Command: {}", stringify!([<first_scan_ $type>]));
+                    info!("ValueType: {:?}, ScanInfo: {:?}", value_type, scan_info);
+
                     let process = Process::open(pid).unwrap();
-                    println!("Opened process {:?}", process);
-                    println!("****FirstScan****\nValueType: {:?}, ScanInfo: {:?}", value_type, scan_info);
+                    info!("Opened process {:?}", process);
 
                     const MASK: u32 = winnt::PAGE_EXECUTE_READWRITE
                         | winnt::PAGE_EXECUTE_WRITECOPY
@@ -150,10 +153,10 @@ macro_rules! impl_scan {
                         .filter(|p| (p.Protect & MASK) != 0)
                         .collect::<Vec<_>>();
 
-                    println!("Scanning {} memory regions", regions.len());
+                    info!("Scanning {} memory regions", regions.len());
                     let scan = scan_info.to_scan(&value_type).unwrap();
                     let last_scan = process.scan_regions(&regions, scan);
-                    println!(
+                    info!(
                         "Found {} locations",
                         last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
                     );
@@ -164,10 +167,12 @@ macro_rules! impl_scan {
 
                 #[tauri::command]
                 fn [<next_scan_ $type>](scan_info: ScanInfo, state: tauri::State<AppState>) {
-                    println!(
-                        "****NextScan****\nValueType: {:?}, ScanInfo: {:?}",
+                    info!("Command: {}", stringify!([<next_scan_ $type>]));
+                    info!(
+                        "ValueType: {:?}, ScanInfo: {:?}",
                         &state.scan_value_type.lock().unwrap(), scan_info
                     );
+
                     let scan = scan_info
                         .to_scan(&state.scan_value_type.lock().unwrap())
                         .unwrap();
@@ -178,7 +183,7 @@ macro_rules! impl_scan {
                         .as_ref()
                         .unwrap()
                         .rescan_regions(&state.[<last_scan_ $type>].lock().unwrap(), scan);
-                    println!(
+                    info!(
                         "Now have {} locations",
                         last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
                     );
