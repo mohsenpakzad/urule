@@ -22,6 +22,8 @@ use winapi::um::winnt;
 
 #[tauri::command]
 fn get_processes() -> Vec<ProcessView> {
+    info!("Command: get_processes");
+
     process::enum_proc()
         .unwrap()
         .into_iter()
@@ -38,6 +40,8 @@ fn get_processes() -> Vec<ProcessView> {
 
 #[tauri::command]
 fn get_opened_process(state: tauri::State<AppState>) -> Option<ProcessView> {
+    info!("Command: get_opened_process");
+
     state
         .opened_process
         .lock()
@@ -92,6 +96,7 @@ macro_rules! impl_scan {
 
             #[tauri::command]
             fn clear_last_scan(state: tauri::State<AppState>) {
+                info!("Command: clear_last_scan");
                 $(state.[<last_scan_ $type>].lock().unwrap().clear();)+
             }
 
@@ -102,6 +107,8 @@ macro_rules! impl_scan {
                     value: $type,
                     state: tauri::State<AppState>,
                 ) -> Option<usize> {
+                    info!("Command: {}", stringify!([<write_opened_process_memory_ $type>]));
+
                     state
                         .opened_process
                         .lock()
@@ -118,6 +125,8 @@ macro_rules! impl_scan {
                     offset: usize,
                     state: tauri::State<AppState>,
                 ) -> (usize, Vec<Location<$type_size, $type>>) {
+                    info!("Command: {}", stringify!([<get_last_scan_ $type>]));
+
                     let regions = state.[<last_scan_ $type>].lock().unwrap().clone();
 
                     let total_locations_number = regions
