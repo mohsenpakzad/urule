@@ -169,11 +169,11 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         let &low = locations.keys().min().unwrap();
         let &high = locations.keys().max().unwrap();
         let addressing_range = high - low;
-        let address_number = addressing_range / SIZE;
+        let range_max_addresses = addressing_range / SIZE;
 
         // Would using a byte-mask for the entire region be more worth it?
         // Base(usize) + address_number * mask(bool) < locations.len() * address(usize)
-        if mem::size_of::<usize>() + address_number * mem::size_of::<bool>()
+        if mem::size_of::<usize>() + range_max_addresses * mem::size_of::<bool>()
             < locations.len() * mem::size_of::<usize>()
         {
             let mut addresses = locations.keys();
