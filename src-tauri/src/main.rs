@@ -87,7 +87,11 @@ macro_rules! impl_scan {
                     ])
                     .plugin(
                         LoggerBuilder::default()
-                        .with_colors(ColoredLevelConfig::default().info(Color::Cyan))
+                        .with_colors(
+                            ColoredLevelConfig::default()
+                                .info(Color::Cyan)
+                                .debug(Color::Magenta),
+                        )
                         .build(),
                     )
                     .run(tauri::generate_context!())
