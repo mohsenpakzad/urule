@@ -79,7 +79,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         match self {
             LocationsStyle::KeyValue(locations) => locations.len(),
             LocationsStyle::SameValue { locations, .. } => locations.len(),
-            LocationsStyle::Range { range, .. } => range.len(),
+            LocationsStyle::Range { range, .. } => range.len() / SIZE,
             LocationsStyle::Offsetted { offsets, .. } => offsets.len(),
             LocationsStyle::Masked { values, .. } => values.len(),
         }
