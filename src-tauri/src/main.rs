@@ -8,7 +8,7 @@ mod region;
 mod scan;
 
 use crate::scan::scan_meta::IntoScan;
-use log::info;
+use log::{info, LevelFilter};
 use paste::paste;
 use process::{Process, ProcessView};
 use region::{Location, Region};
@@ -92,6 +92,11 @@ macro_rules! impl_scan {
                                 .info(Color::Cyan)
                                 .debug(Color::Magenta),
                         )
+                        .level(if cfg!(debug_assertions) {
+                            LevelFilter::Trace
+                        } else {
+                            LevelFilter::Info
+                        })
                         .build(),
                     )
                     .run(tauri::generate_context!())
