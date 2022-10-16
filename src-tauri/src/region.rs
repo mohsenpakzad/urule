@@ -1,4 +1,5 @@
 use crate::scan::Scannable;
+use log::info;
 use serde::Serialize;
 use std::{collections::BTreeMap, mem, ops::Range};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
@@ -158,6 +159,15 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
 
         // Can the entire region be represented with range style?
         if locations.len() == range_max_addresses {
+            info!("Conversion to LocationsStyle::Range!");
+            info!("Addresses: {}", locations.len());
+            info!("Max addresses: {}", range_max_addresses);
+            info!(
+                "Addresses size reduced form {} bytes to {} bytes",
+                locations.len() * mem::size_of::<usize>(),
+                mem::size_of::<Range<usize>>()
+            );
+
             *self = LocationsStyle::Range {
                 range: low..high + 1,
                 values: locations.into_values().collect(),
@@ -170,6 +180,15 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // Due time inefficiency of this method,
         // We only use it when at least 90% of range_max_addresses is used.
         if locations.len() * 10 >= range_max_addresses * 9 {
+            info!("Conversion to LocationsStyle::Masked!");
+            info!("Addresses: {}", locations.len());
+            info!("Max addresses: {}", range_max_addresses);
+            info!(
+                "Addresses size reduced form {} bytes to {} bytes",
+                locations.len() * mem::size_of::<usize>(),
+                mem::size_of::<usize>() + range_max_addresses
+            );
+
             let mut addresses = locations.keys();
             let mut next_set = addresses.next();
 
@@ -195,6 +214,15 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // And because we ignore locations.len() == 1 cases, if addressing_range is <= u16::MAX
         // Base(usize) + locations.len() * address(u16) < locations.len() * address(usize) is always true
         if addressing_range <= u16::MAX as _ {
+            info!("Conversion to LocationsStyle::Offsetted!");
+            info!("Addresses: {}", locations.len());
+            info!("Max addresses: {}", range_max_addresses);
+            info!(
+                "Addresses size reduced form {} bytes to {} bytes",
+                locations.len() * mem::size_of::<usize>(),
+                mem::size_of::<usize>() + locations.len() * mem::size_of::<u16>()
+            );
+
             // We will always store a `0` offset, but that's fine, it makes iteration easier and
             // getting rid of it would only gain usu 2 bytes.
             *self = LocationsStyle::Offsetted {
