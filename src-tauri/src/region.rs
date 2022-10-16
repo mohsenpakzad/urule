@@ -21,8 +21,8 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
         match &self.locations {
             LocationsStyle::KeyValue(locations) => *locations.get(&addr).unwrap(),
             LocationsStyle::SameValue { value, .. } => *value,
-            LocationsStyle::Range { values, .. } => {
-                let index = (addr - self.info.BaseAddress as usize) / SIZE;
+            LocationsStyle::Range { range, values } => {
+                let index = (addr - range.start) / SIZE;
                 values[index]
             }
             LocationsStyle::Offsetted { base, offsets } => {
