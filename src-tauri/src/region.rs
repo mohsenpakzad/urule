@@ -28,9 +28,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                 let offset = (addr - base) as u16;
                 *offsets.get(&offset).unwrap()
             }
-            LocationsStyle::Masked {
-                values, base, mask, ..
-            } => {
+            LocationsStyle::Masked { base, mask, values } => {
                 let index = mask
                     .iter()
                     .enumerate()
