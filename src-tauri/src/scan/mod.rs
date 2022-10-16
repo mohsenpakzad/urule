@@ -91,17 +91,21 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
             | Scan::Decreased
             | Scan::Increased
             | Scan::DecreasedBy(_)
-            | Scan::IncreasedBy(_) => Region {
-                info,
-                locations: LocationsStyle::Range {
-                    range: base..base + info.RegionSize,
-                    values: memory
-                        .windows(SIZE)
-                        .step_by(SIZE)
-                        .map(|value| T::from_bytes(value.try_into().unwrap()))
-                        .collect(),
-                },
-            },
+            | Scan::IncreasedBy(_) => {
+                let range = base..base + info.RegionSize;
+                let values = memory
+                    .windows(SIZE)
+                    .step_by(SIZE)
+                    .map(|value| T::from_bytes(value.try_into().unwrap()))
+                    .collect::<Vec<_>>();
+
+                assert!(range.len() / SIZE == values.len());
+
+                Region {
+                    info,
+                    locations: LocationsStyle::Range { range, values },
+                }
+            }
         }
     }
 

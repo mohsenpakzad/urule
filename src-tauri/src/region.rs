@@ -202,12 +202,16 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         if addressing_range <= u16::MAX as _ {
             // We will always store a `0` offset, but that's fine, it makes iteration easier and
             // getting rid of it would only gain usu 2 bytes.
+            let offsets = locations
+                .keys()
+                .map(|&loc| (loc - low).try_into().unwrap())
+                .collect::<Vec<_>>();
+
+            assert!(offsets.len() == locations.len());
+
             *self = LocationsStyle::Offsetted {
                 base: low,
-                offsets: locations
-                    .keys()
-                    .map(|&loc| (loc - low).try_into().unwrap())
-                    .collect(),
+                offsets,
                 values: locations.into_values().collect(),
             };
             return;
