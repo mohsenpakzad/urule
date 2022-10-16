@@ -27,7 +27,7 @@ macro_rules! impl_scannable_for_int {
 
                 fn from_bytes<T: Scannable<$type_size>>(bytes: [u8; $type_size]) -> T {
                     // SAFETY: size of input and output is always the same
-                    unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }
+                    unsafe { bytes.as_ptr().cast::<T>().read() }
                 }
 
                 fn to_bytes(self) -> [u8; $type_size] {
@@ -60,7 +60,7 @@ macro_rules! impl_scannable_for_float {
 
                 fn from_bytes<T: Scannable<$type_size>>(bytes: [u8; $type_size]) -> T {
                     // SAFETY: size of input and output is always the same
-                    unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }
+                    unsafe { bytes.as_ptr().cast::<T>().read() }
                 }
 
                 fn to_bytes(self) -> [u8; $type_size] {
