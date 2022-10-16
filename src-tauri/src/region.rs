@@ -1,5 +1,5 @@
 use crate::scan::Scannable;
-use log::info;
+use log::debug;
 use serde::Serialize;
 use std::{collections::BTreeMap, mem, ops::Range};
 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
@@ -198,10 +198,10 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
 
         // Can the entire region be represented with range style?
         if locations.len() == range_max_addresses {
-            info!("Conversion to LocationsStyle::Range!");
-            info!("Addresses: {}", locations.len());
-            info!("Max addresses: {}", range_max_addresses);
-            info!(
+            debug!("Conversion to LocationsStyle::Range!");
+            debug!("Addresses: {}", locations.len());
+            debug!("Max addresses: {}", range_max_addresses);
+            debug!(
                 "Addresses size reduced form {} bytes to {} bytes",
                 locations.len() * mem::size_of::<usize>(),
                 mem::size_of::<Range<usize>>()
@@ -222,10 +222,10 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             && mem::size_of::<usize>() + range_max_addresses
                 < locations.len() * mem::size_of::<usize>()
         {
-            info!("Conversion to LocationsStyle::Masked!");
-            info!("Addresses: {}", locations.len());
-            info!("Max addresses: {}", range_max_addresses);
-            info!(
+            debug!("Conversion to LocationsStyle::Masked!");
+            debug!("Addresses: {}", locations.len());
+            debug!("Max addresses: {}", range_max_addresses);
+            debug!(
                 "Addresses size reduced form {} bytes to {} bytes",
                 locations.len() * mem::size_of::<usize>(),
                 mem::size_of::<usize>() + range_max_addresses
@@ -257,16 +257,16 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // Due time inefficiency of this method,
         // We only use it when at least 95% of range_max_addresses is used.
         if locations.len() as f32 >= range_max_addresses as f32 * 0.95 {
-            info!("Conversion to LocationsStyle::ExcludedRange!");
-            info!("Addresses: {}", locations.len());
-            info!("Max addresses: {}", range_max_addresses);
+            debug!("Conversion to LocationsStyle::ExcludedRange!");
+            debug!("Addresses: {}", locations.len());
+            debug!("Max addresses: {}", range_max_addresses);
 
             let excluded = (low..=high)
                 .step_by(SIZE)
                 .filter(|addr| !locations.contains_key(addr))
                 .collect::<Vec<_>>();
 
-            info!(
+            debug!(
                 "Addresses size reduced form {} bytes to {} bytes",
                 locations.len() * mem::size_of::<usize>(),
                 mem::size_of::<Range<usize>>() + excluded.len() * mem::size_of::<usize>()
@@ -284,10 +284,10 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // And because we ignore locations.len() == 1 cases, if addressing_range is <= u16::MAX
         // Base(usize) + locations.len() * address(u16) < locations.len() * address(usize) is always true
         if addressing_range <= u16::MAX as _ {
-            info!("Conversion to LocationsStyle::Offsetted!");
-            info!("Addresses: {}", locations.len());
-            info!("Max addresses: {}", range_max_addresses);
-            info!(
+            debug!("Conversion to LocationsStyle::Offsetted!");
+            debug!("Addresses: {}", locations.len());
+            debug!("Max addresses: {}", range_max_addresses);
+            debug!(
                 "Addresses size reduced form {} bytes to {} bytes",
                 locations.len() * mem::size_of::<usize>(),
                 mem::size_of::<usize>() + locations.len() * mem::size_of::<u16>()
