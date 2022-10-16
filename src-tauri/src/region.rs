@@ -178,8 +178,11 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         // Would using a byte-mask for the entire region be more worth it?
         // Base(usize) + address_number * mask(bool) < locations.len() * address(usize)
         // Due time inefficiency of this method,
-        // We only use it when at least 90% of range_max_addresses is used.
-        if locations.len() * 10 >= range_max_addresses * 9 {
+        // We only use it on small number of addresses.
+        if range_max_addresses <= usize::BITS as _
+            && mem::size_of::<usize>() + range_max_addresses
+                < locations.len() * mem::size_of::<usize>()
+        {
             info!("Conversion to LocationsStyle::Masked!");
             info!("Addresses: {}", locations.len());
             info!("Max addresses: {}", range_max_addresses);
@@ -357,17 +360,16 @@ mod location_tests {
             (0x2014, 4),
             (0x2018, 5),
             (0x201c, 6),
-            (0x2020, 7),
-            (0x2024, 8),
+            // (0x2020, -1), Not presented
+            (0x2024, 7),
         ]));
-        // 90% of locations are used.
         locations.try_compact();
         assert_eq!(
             locations,
             LocationsStyle::Masked {
                 base: 0x2000,
-                mask: vec![true, true, false, true, true, true, true, true, true, true],
-                values: vec![0, 1, 2, 3, 4, 5, 6, 7, 8]
+                mask: vec![true, true, false, true, true, true, true, true, false, true],
+                values: vec![0, 1, 2, 3, 4, 5, 6, 7]
             }
         );
     }
