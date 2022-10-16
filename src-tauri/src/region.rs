@@ -154,32 +154,16 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         let &low = locations.keys().min().unwrap();
         let &high = locations.keys().max().unwrap();
         let addressing_range = high - low;
-        // let range_max_addresses = addressing_range / SIZE;
+        let range_max_addresses = (addressing_range / SIZE) + 1;
 
-        // // Would using a byte-mask for the entire region be more worth it?
-        // // Base(usize) + address_number * mask(bool) < locations.len() * address(usize)
-        // if mem::size_of::<usize>() + range_max_addresses * mem::size_of::<bool>()
-        //     < locations.len() * mem::size_of::<usize>()
-        // {
-        //     let mut addresses = locations.keys();
-        //     let mut next_set = addresses.next();
-        //     *self = LocationsStyle::Masked {
-        //         base: low,
-        //         mask: (low..high)
-        //             .step_by(SIZE)
-        //             .map(|addr| {
-        //                 if Some(&addr) == next_set {
-        //                     next_set = addresses.next();
-        //                     true
-        //                 } else {
-        //                     false
-        //                 }
-        //             })
-        //             .collect(),
-        //         values: locations.into_values().collect(),
-        //     };
-        //     return;
-        // }
+        // Can the entire region be represented with range style?
+        if locations.len() == range_max_addresses {
+            *self = LocationsStyle::Range {
+                range: low..high + 1,
+                values: locations.into_values().collect(),
+            };
+            return;
+        }
 
         // Can the entire region be represented with a base and 16-bit offsets?
         // And because we ignore locations.len() == 1 cases, if addressing_range is <= u16::MAX
@@ -269,6 +253,29 @@ mod location_tests {
         let original = locations.clone();
         locations.try_compact();
         assert_eq!(locations, original);
+    }
+
+    #[test]
+    fn compact_range() {
+        let mut locations = LocationsStyle::KeyValue(BTreeMap::from([
+            (0x2000, -2),
+            (0x2004, -1),
+            (0x2008, 0),
+            (0x200c, 1),
+            (0x2010, 2),
+            (0x2014, 3),
+            (0x2018, 4),
+            (0x201c, 5),
+            (0x2020, 6),
+        ]));
+        locations.try_compact();
+        assert_eq!(
+            locations,
+            LocationsStyle::Range {
+                range: 0x2000..0x2021,
+                values: vec![-2, -1, 0, 1, 2, 3, 4, 5, 6]
+            }
+        );
     }
 
     #[test]
