@@ -25,6 +25,18 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                 let index = (addr - range.start) / SIZE;
                 values[index]
             }
+            LocationsStyle::ExcludedRange {
+                range,
+                excluded,
+                values,
+            } => {
+                let index = (addr - range.start) / SIZE;
+                let smaller_excluded_addresses_count = excluded
+                    .iter()
+                    .filter(|&&excluded_addr| addr > excluded_addr)
+                    .count();
+                values[index - smaller_excluded_addresses_count]
+            }
             LocationsStyle::Offsetted { base, offsets } => {
                 let offset = (addr - base) as u16;
                 *offsets.get(&offset).unwrap()
@@ -59,6 +71,12 @@ pub enum LocationsStyle<const SIZE: usize, T: Scannable<SIZE>> {
     SameValue { locations: Vec<usize>, value: T },
     /// A range of memory locations. Everything within here should be considered.
     Range { range: Range<usize>, values: Vec<T> },
+    /// A excluded range of memory locations. Everything except excluded ones should be considered.
+    ExcludedRange {
+        range: Range<usize>,
+        excluded: Vec<usize>,
+        values: Vec<T>,
+    },
     /// A Offsetted memory location. It uses steps to represent addresses.
     Offsetted {
         base: usize,
@@ -80,6 +98,9 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             LocationsStyle::KeyValue(locations) => locations.len(),
             LocationsStyle::SameValue { locations, .. } => locations.len(),
             LocationsStyle::Range { range, .. } => range.len() / SIZE,
+            LocationsStyle::ExcludedRange {
+                range, excluded, ..
+            } => range.len() - excluded.len(),
             LocationsStyle::Offsetted { offsets, .. } => offsets.len(),
             LocationsStyle::Masked { values, .. } => values.len(),
         }
@@ -91,6 +112,14 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             LocationsStyle::KeyValue(locations) => Box::new(locations.keys().into_iter().copied()),
             LocationsStyle::SameValue { locations, .. } => Box::new(locations.iter().copied()),
             LocationsStyle::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
+            LocationsStyle::ExcludedRange {
+                range, excluded, ..
+            } => Box::new(
+                range
+                    .clone()
+                    .step_by(SIZE)
+                    .filter(|addr| !excluded.contains(addr)),
+            ),
             LocationsStyle::Offsetted { base, offsets, .. } => {
                 Box::new(offsets.keys().map(move |&offset| base + offset as usize))
             }
@@ -124,6 +153,16 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
                     address: range.start + index * SIZE,
                     value,
                 })
+                .collect(),
+            LocationsStyle::ExcludedRange {
+                range,
+                excluded,
+                values,
+            } => range
+                .step_by(SIZE)
+                .filter(|addr| !excluded.contains(addr))
+                .zip(values)
+                .map(|(address, value)| Location { address, value })
                 .collect(),
             LocationsStyle::Offsetted { base, offsets } => offsets
                 .into_iter()
@@ -208,6 +247,34 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
                         }
                     })
                     .collect(),
+                values: locations.into_values().collect(),
+            };
+            return;
+        }
+
+        // Can the entire region be represented with excluded range style?
+        // This method is effective when a small number of range addresses are excluded.
+        // Due time inefficiency of this method,
+        // We only use it when at least 95% of range_max_addresses is used.
+        if locations.len() as f32 >= range_max_addresses as f32 * 0.95 {
+            info!("Conversion to LocationsStyle::ExcludedRange!");
+            info!("Addresses: {}", locations.len());
+            info!("Max addresses: {}", range_max_addresses);
+
+            let excluded = (low..=high)
+                .step_by(SIZE)
+                .filter(|addr| !locations.contains_key(addr))
+                .collect::<Vec<_>>();
+
+            info!(
+                "Addresses size reduced form {} bytes to {} bytes",
+                locations.len() * mem::size_of::<usize>(),
+                mem::size_of::<Range<usize>>() + excluded.len() * mem::size_of::<usize>()
+            );
+
+            *self = LocationsStyle::ExcludedRange {
+                range: low..high + 1,
+                excluded,
                 values: locations.into_values().collect(),
             };
             return;
@@ -331,6 +398,46 @@ mod location_tests {
             LocationsStyle::Range {
                 range: 0x2000..0x2021,
                 values: vec![-2, -1, 0, 1, 2, 3, 4, 5, 6]
+            }
+        );
+    }
+
+    #[test]
+    fn compact_excluded_range() {
+        let mut locations = LocationsStyle::KeyValue(
+            (0x400..0x481)
+                .into_iter()
+                .step_by(2)
+                .filter_map(|addr| {
+                    if addr % 91 == 0 {
+                        None
+                    } else {
+                        Some((addr as usize, addr / 2 as i16))
+                    }
+                })
+                .collect(),
+        );
+        locations.try_compact();
+        assert_eq!(
+            locations,
+            LocationsStyle::ExcludedRange {
+                range: 0x400..0x481,
+                excluded: (0x400..=0x480)
+                    .into_iter()
+                    .step_by(2)
+                    .filter(|addr| addr % 91 == 0)
+                    .collect::<Vec<_>>(),
+                values: (0x400..=0x480)
+                    .into_iter()
+                    .step_by(2)
+                    .filter_map(|addr| {
+                        if addr % 91 == 0 {
+                            None
+                        } else {
+                            Some(addr / 2 as i16)
+                        }
+                    })
+                    .collect()
             }
         );
     }
