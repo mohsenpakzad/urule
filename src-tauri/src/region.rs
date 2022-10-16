@@ -24,16 +24,9 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Region<SIZE, T> {
                 let index = (addr - self.info.BaseAddress as usize) / SIZE;
                 values[index]
             }
-            LocationsStyle::Offsetted {
-                values,
-                base,
-                offsets,
-            } => {
-                let index = offsets
-                    .iter()
-                    .position(|&offset| base + offset as usize == addr)
-                    .unwrap();
-                values[index]
+            LocationsStyle::Offsetted { base, offsets } => {
+                let offset = (addr - base) as u16;
+                *offsets.get(&offset).unwrap()
             }
             LocationsStyle::Masked {
                 values, base, mask, ..
@@ -70,8 +63,7 @@ pub enum LocationsStyle<const SIZE: usize, T: Scannable<SIZE>> {
     /// A Offsetted memory location. It uses steps to represent addresses.
     Offsetted {
         base: usize,
-        offsets: Vec<u16>,
-        values: Vec<T>,
+        offsets: BTreeMap<u16, T>,
     },
     /// A masked memory location. Only items within the mask apply.
     /// The mask assumes 4-byte aligned data  (so one byte for every 4).
@@ -101,7 +93,7 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             LocationsStyle::SameValue { locations, .. } => Box::new(locations.iter().copied()),
             LocationsStyle::Range { range, .. } => Box::new(range.clone().step_by(SIZE)),
             LocationsStyle::Offsetted { base, offsets, .. } => {
-                Box::new(offsets.iter().map(move |&offset| base + offset as usize))
+                Box::new(offsets.keys().map(move |&offset| base + offset as usize))
             }
             LocationsStyle::Masked { base, mask, .. } => {
                 Box::new(mask.iter().enumerate().filter_map(move |(index, &set)| {
@@ -134,13 +126,8 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
                     value,
                 })
                 .collect(),
-            LocationsStyle::Offsetted {
-                base,
-                offsets,
-                values,
-            } => offsets
+            LocationsStyle::Offsetted { base, offsets } => offsets
                 .into_iter()
-                .zip(values)
                 .map(|(offset, value)| Location {
                     address: base + offset as usize,
                     value,
@@ -202,17 +189,12 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
         if addressing_range <= u16::MAX as _ {
             // We will always store a `0` offset, but that's fine, it makes iteration easier and
             // getting rid of it would only gain usu 2 bytes.
-            let offsets = locations
-                .keys()
-                .map(|&loc| (loc - low).try_into().unwrap())
-                .collect::<Vec<_>>();
-
-            assert!(offsets.len() == locations.len());
-
             *self = LocationsStyle::Offsetted {
                 base: low,
-                offsets,
-                values: locations.into_values().collect(),
+                offsets: locations
+                    .into_iter()
+                    .map(|(loc, value)| ((loc - low).try_into().unwrap(), value))
+                    .collect(),
             };
             return;
         }
@@ -262,8 +244,7 @@ mod location_tests {
         // Already compacted
         let mut locations = LocationsStyle::Offsetted {
             base: 0x2000,
-            offsets: vec![0, 0x20, 0x40],
-            values: VALUES,
+            offsets: BTreeMap::from([(0, 0), (0x20, 1), (0x40, 2)]),
         };
         locations.try_compact();
         assert!(matches!(locations, LocationsStyle::Offsetted { .. }));
@@ -301,8 +282,7 @@ mod location_tests {
             locations,
             LocationsStyle::Offsetted {
                 base: 0x2000,
-                offsets: vec![0x0000, 0x0004, 0x0040],
-                values: vec![0, 1, 2]
+                offsets: BTreeMap::from([(0x0000, 0), (0x0004, 1), (0x0040, 2)]),
             }
         );
     }
@@ -356,8 +336,7 @@ mod location_tests {
     fn iter_offsetted() {
         let locations = LocationsStyle::Offsetted {
             base: 0x2000,
-            offsets: vec![0x0000, 0x0004, 0x000c],
-            values: VALUES,
+            offsets: BTreeMap::from([(0x0000, 0), (0x0004, 1), (0x000c, 2)]),
         };
         assert_eq!(
             locations.addresses().collect::<Vec<_>>(),
