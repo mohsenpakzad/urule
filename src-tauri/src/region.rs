@@ -165,6 +165,32 @@ impl<const SIZE: usize, T: Scannable<SIZE>> LocationsStyle<SIZE, T> {
             return;
         }
 
+        // Would using a byte-mask for the entire region be more worth it?
+        // Base(usize) + address_number * mask(bool) < locations.len() * address(usize)
+        // Due time inefficiency of this method,
+        // We only use it when at least 90% of range_max_addresses is used.
+        if locations.len() * 10 >= range_max_addresses * 9 {
+            let mut addresses = locations.keys();
+            let mut next_set = addresses.next();
+
+            *self = LocationsStyle::Masked {
+                base: low,
+                mask: (low..=high)
+                    .step_by(SIZE)
+                    .map(|addr| {
+                        if Some(&addr) == next_set {
+                            next_set = addresses.next();
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .collect(),
+                values: locations.into_values().collect(),
+            };
+            return;
+        }
+
         // Can the entire region be represented with a base and 16-bit offsets?
         // And because we ignore locations.len() == 1 cases, if addressing_range is <= u16::MAX
         // Base(usize) + locations.len() * address(u16) < locations.len() * address(usize) is always true
@@ -297,20 +323,23 @@ mod location_tests {
         let mut locations = LocationsStyle::KeyValue(BTreeMap::from([
             (0x2000, 0),
             (0x2004, 1),
+            // (0x2008, -1), Not presented
             (0x200c, 2),
             (0x2010, 3),
             (0x2014, 4),
             (0x2018, 5),
             (0x201c, 6),
             (0x2020, 7),
+            (0x2024, 8),
         ]));
+        // 90% of locations are used.
         locations.try_compact();
         assert_eq!(
             locations,
             LocationsStyle::Masked {
                 base: 0x2000,
-                mask: vec![true, true, false, true, true, true, true, true],
-                values: vec![0, 1, 2, 3, 4, 5, 6, 7]
+                mask: vec![true, true, false, true, true, true, true, true, true, true],
+                values: vec![0, 1, 2, 3, 4, 5, 6, 7, 8]
             }
         );
     }
