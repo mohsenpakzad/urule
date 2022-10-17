@@ -13,7 +13,7 @@ use paste::paste;
 use process::{Process, ProcessView};
 use region::{Location, Region};
 use scan::scan_meta::{ScanInfo, ValueType};
-use std::sync::Mutex;
+use std::{mem, sync::Mutex};
 use tauri_plugin_log::{
     fern::colors::{Color, ColoredLevelConfig},
     LoggerBuilder,
@@ -58,7 +58,10 @@ macro_rules! impl_scan {
             pub struct AppState {
                 opened_process: Mutex<Option<Process>>,
                 scan_value_type: Mutex<ValueType>,
-                $([<last_scan_ $type>]: Mutex<Vec<Region<$type_size, $type>>>,)+
+                $(
+                    [<previous_scan_ $type>]: Mutex<Vec<Region<$type_size, $type>>>,
+                    [<last_scan_ $type>]: Mutex<Vec<Region<$type_size, $type>>>,
+                )+
             }
 
             impl AppState {
@@ -66,7 +69,10 @@ macro_rules! impl_scan {
                     AppState {
                         opened_process: Mutex::new(None),
                         scan_value_type: Mutex::new(ValueType::I32),
-                        $([<last_scan_ $type>]: Mutex::new(Vec::new()),)+
+                        $(
+                            [<previous_scan_ $type>]: Mutex::new(Vec::new()),
+                            [<last_scan_ $type>]: Mutex::new(Vec::new()),
+                        )+
                     }
                 }
             }
@@ -83,6 +89,7 @@ macro_rules! impl_scan {
                             [<get_last_scan_ $type>],
                             [<first_scan_ $type>],
                             [<next_scan_ $type>],
+                            [<undo_scan_ $type>],
                         )+
                     ])
                     .plugin(
@@ -103,10 +110,14 @@ macro_rules! impl_scan {
                     .expect("error while running tauri application");
             }
 
+            // TODO: Rename
             #[tauri::command]
             fn clear_last_scan(state: tauri::State<AppState>) {
                 info!("Command: clear_last_scan");
-                $(state.[<last_scan_ $type>].lock().unwrap().clear();)+
+                $(
+                    state.[<previous_scan_ $type>].lock().unwrap().clear();
+                    state.[<last_scan_ $type>].lock().unwrap().clear();
+                )+
             }
 
             $(
@@ -180,6 +191,8 @@ macro_rules! impl_scan {
                     );
                     *state.opened_process.lock().unwrap() = Some(process);
                     *state.scan_value_type.lock().unwrap() = value_type;
+
+                    *state.[<previous_scan_ $type>].lock().unwrap() = last_scan.clone();
                     *state.[<last_scan_ $type>].lock().unwrap() = last_scan;
                 }
 
@@ -205,7 +218,18 @@ macro_rules! impl_scan {
                         "Now have {} locations",
                         last_scan.iter().map(|r| r.locations.len()).sum::<usize>()
                     );
+
+                    *state.[<previous_scan_ $type>].lock().unwrap() =
+                        mem::take(state.[<last_scan_ $type>].lock().unwrap().as_mut());
                     *state.[<last_scan_ $type>].lock().unwrap() = last_scan;
+                }
+
+                #[tauri::command]
+                fn [<undo_scan_ $type>](state: tauri::State<AppState>) {
+                    info!("Command: {}", stringify!([<undo_scan_ $type>]));
+
+                    *state.[<last_scan_ $type>].lock().unwrap() =
+                        mem::take(state.[<previous_scan_ $type>].lock().unwrap().as_mut());
                 }
             )+
         }

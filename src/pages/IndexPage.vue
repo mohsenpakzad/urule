@@ -56,6 +56,8 @@ const locationTableColumns = <QTableColumn[]>[
   },
 ];
 
+const undoScanAvailability = ref(false);
+
 const locationsLoading = ref(false);
 
 const changeValueForm = ref<QForm>();
@@ -163,11 +165,16 @@ async function nextScan() {
   await fetchLocations();
 
   selectedLocations.value = [];
+  undoScanAvailability.value = true;
   q.loading.hide();
 }
 
 async function undoScan() {
-  // todo
+  await uruleCore.undoScan();
+  await fetchLocations();
+
+  selectedLocations.value = [];
+  undoScanAvailability.value = false;
 }
 
 async function newScan() {
@@ -253,6 +260,7 @@ async function writeMemory() {
                 />
 
                 <q-btn
+                  v-if="undoScanAvailability"
                   label="Undo Scan"
                   icon="undo"
                   color="negative"

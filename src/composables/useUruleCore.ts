@@ -56,6 +56,10 @@ export function useUruleCore() {
     });
   }
 
+  async function undoScan() {
+    await invoke<void>(`undo_scan_${currentValueType}`);
+  }
+
   function deleteUnnecessaryValues(scanInfo: ScanInfo) {
     switch (scanInfo.typ) {
       case ScanType.Unknown:
@@ -86,5 +90,6 @@ export function useUruleCore() {
     getLastScan,
     firstScan,
     nextScan,
+    undoScan,
   };
 }
