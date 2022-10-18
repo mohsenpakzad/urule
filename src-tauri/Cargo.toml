@@ -1,10 +1,10 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+version = "1.0.0"
+description = "You rule, simplified version of cheat engine"
+authors = ["Mohsen Pakzad <mohsen137853@gmail.com>"]
+license = "MIT & APACHE"
+repository = "https://github.com/mohsenpakzad/urule"
 default-run = "app"
 edition = "2021"
 rust-version = "1.63"
