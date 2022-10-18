@@ -151,12 +151,12 @@ export const useStore = defineStore('main', () => {
   });
   const scanForm = ref<QForm>();
   function resetToNextScan() {
-    if (scanData.scanType!.availability & ScanState.FirstScan) {
+    if (!(scanData.scanType!.availability & ScanState.NextScan)) {
       scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
     }
   }
   function resetToFirstScan() {
-    if (scanData.scanType!.availability & ScanState.NextScan) {
+    if (!(scanData.scanType!.availability & ScanState.FirstScan)) {
       scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
     }
     scanData.value = <ScanValue>{
