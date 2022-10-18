@@ -20,8 +20,8 @@ const {
 
   scanData,
 
-  resetUnknownScan,
-  resetScanData,
+  resetToNextScan,
+  resetToFirstScan,
 } = store;
 
 const {
@@ -148,8 +148,8 @@ async function firstScan() {
   );
   await fetchLocations();
 
-  scanState.value = ScanState.AfterInitialScan;
-  resetUnknownScan();
+  scanState.value = ScanState.NextScan;
+  resetToNextScan();
 
   q.loading.hide();
 }
@@ -180,12 +180,12 @@ async function undoScan() {
 async function newScan() {
   await uruleCore.clearLastScan();
 
-  resetScanData();
+  resetToFirstScan();
   locations.value = [];
   selectedLocations.value = [];
   await scanForm.value?.resetValidation();
 
-  scanState.value = ScanState.BeforeInitialScan;
+  scanState.value = ScanState.FirstScan;
 }
 
 async function writeMemory() {
@@ -218,7 +218,7 @@ async function writeMemory() {
           <q-chip
             icon="saved_search"
             :removable="
-              store.openedProcess && scanState === ScanState.BeforeInitialScan
+              store.openedProcess && scanState === ScanState.FirstScan
             "
             @remove="store.openedProcess = undefined"
             size="medium"
@@ -232,7 +232,7 @@ async function writeMemory() {
           </q-chip>
 
           <div class="row items-start q-mb-md">
-            <template v-if="scanState === ScanState.BeforeInitialScan">
+            <template v-if="scanState === ScanState.FirstScan">
               <q-btn
                 label="First Scan"
                 icon="start"
@@ -250,7 +250,7 @@ async function writeMemory() {
               </q-btn>
             </template>
 
-            <template v-else-if="scanState === ScanState.AfterInitialScan">
+            <template v-else-if="scanState === ScanState.NextScan">
               <div class="q-gutter-sm">
                 <q-btn
                   label="Next Scan"
@@ -298,7 +298,7 @@ async function writeMemory() {
               dense
               options-dense
               v-model="scanData.valueType"
-              :readonly="scanState === ScanState.AfterInitialScan"
+              :readonly="scanState === ScanState.NextScan"
             />
           </div>
 

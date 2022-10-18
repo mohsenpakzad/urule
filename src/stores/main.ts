@@ -12,47 +12,47 @@ export const useStore = defineStore('main', () => {
     {
       label: 'Exact value',
       value: ScanType.Exact,
-      availability: ScanState.BeforeInitialScan | ScanState.AfterInitialScan,
+      availability: ScanState.FirstScan | ScanState.NextScan,
     },
     {
       label: 'Value between',
       value: ScanType.InRange,
-      availability: ScanState.BeforeInitialScan | ScanState.AfterInitialScan,
+      availability: ScanState.FirstScan | ScanState.NextScan,
     },
     {
       label: 'Unknown initial value',
       value: ScanType.Unknown,
-      availability: ScanState.BeforeInitialScan,
+      availability: ScanState.FirstScan,
     },
     {
       label: 'Increased value',
       value: ScanType.Increased,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
     {
       label: 'Increased value by',
       value: ScanType.IncreasedBy,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
     {
       label: 'Decreased value',
       value: ScanType.Decreased,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
     {
       label: 'Decreased value by',
       value: ScanType.DecreasedBy,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
     {
       label: 'Changed value',
       value: ScanType.Changed,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
     {
       label: 'Unchanged value',
       value: ScanType.Unchanged,
-      availability: ScanState.AfterInitialScan,
+      availability: ScanState.NextScan,
     },
   ];
   const valueTypes = [
@@ -130,7 +130,7 @@ export const useStore = defineStore('main', () => {
 
   const openedProcess = ref<Process>();
 
-  const scanState = ref<ScanState>(ScanState.BeforeInitialScan);
+  const scanState = ref<ScanState>(ScanState.FirstScan);
   const scanData = reactive({
     scanType: scanTypes.find((e) => e.value === ScanType.Exact),
     valueType: valueTypes.find((e) => e.value === ValueType.I32),
@@ -140,16 +140,13 @@ export const useStore = defineStore('main', () => {
     },
   });
   const scanForm = ref<QForm>();
-  function resetUnknownScan() {
-    if (scanData.scanType?.value === ScanType.Unknown) {
+  function resetToNextScan() {
+    if (scanData.scanType!.availability & ScanState.FirstScan) {
       scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
     }
   }
-  function resetScanData() {
-    if (
-      scanData.scanType?.value != ScanType.Exact &&
-      scanData.scanType?.value != ScanType.InRange
-    ) {
+  function resetToFirstScan() {
+    if (scanData.scanType!.availability & ScanState.NextScan) {
       scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
     }
     scanData.value = <ScanValue>{
@@ -202,7 +199,7 @@ export const useStore = defineStore('main', () => {
     scanTypeOptionsRequiredInputs,
 
     // functions
-    resetUnknownScan,
-    resetScanData,
+    resetToNextScan,
+    resetToFirstScan,
   };
 });

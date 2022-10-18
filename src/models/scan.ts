@@ -21,8 +21,8 @@ export interface ScanValue {
 }
 
 export enum ScanState {
-  BeforeInitialScan = 1 << 0,
-  AfterInitialScan = 1 << 1,
+  FirstScan = 1 << 0,
+  NextScan = 1 << 1,
 }
 
 export enum ValueType {
