@@ -13,6 +13,7 @@ rust-version = "1.63"
 
 [build-dependencies]
 tauri-build = { version = "1.0.4", features = [] }
+winres = "0.1.12"
 
 [dependencies]
 serde_json = "1.0"
