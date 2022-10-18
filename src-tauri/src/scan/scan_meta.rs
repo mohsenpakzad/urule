@@ -13,6 +13,8 @@ pub enum ScanType {
     Exact,
     Unknown,
     InRange,
+    SmallerThan,
+    BiggerThan,
     Unchanged,
     Changed,
     Decreased,
@@ -66,6 +68,12 @@ macro_rules! impl_into_scan {
                     if let Some(ScanValue::Exact(exact_val)) = self.value {
                         match self.typ {
                             ScanType::Exact => return Some(Scan::<$type_size, $type>::Exact(exact_val.parse().unwrap())),
+                            ScanType::SmallerThan => {
+                                return Some(Scan::<$type_size, $type>::SmallerThan(exact_val.parse().unwrap()))
+                            }
+                            ScanType::BiggerThan => {
+                                return Some(Scan::<$type_size, $type>::BiggerThan(exact_val.parse().unwrap()))
+                            }
                             ScanType::DecreasedBy => {
                                 return Some(Scan::<$type_size, $type>::DecreasedBy(exact_val.parse().unwrap()))
                             }

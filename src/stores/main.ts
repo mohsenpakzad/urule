@@ -15,6 +15,16 @@ export const useStore = defineStore('main', () => {
       availability: ScanState.FirstScan | ScanState.NextScan,
     },
     {
+      label: 'Smaller than',
+      value: ScanType.SmallerThan,
+      availability: ScanState.FirstScan | ScanState.NextScan,
+    },
+    {
+      label: 'Bigger than',
+      value: ScanType.BiggerThan,
+      availability: ScanState.FirstScan | ScanState.NextScan,
+    },
+    {
       label: 'Value between',
       value: ScanType.InRange,
       availability: ScanState.FirstScan | ScanState.NextScan,
@@ -168,6 +178,8 @@ export const useStore = defineStore('main', () => {
   const scanTypeOptionsRequiredInputs = computed(() => {
     switch (scanData.scanType?.value) {
       case ScanType.Exact:
+      case ScanType.SmallerThan:
+      case ScanType.BiggerThan:
       case ScanType.DecreasedBy:
       case ScanType.IncreasedBy:
         return 1;

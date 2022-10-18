@@ -71,6 +71,8 @@ export function useUruleCore() {
         break;
 
       case ScanType.Exact:
+      case ScanType.SmallerThan:
+      case ScanType.BiggerThan:
       case ScanType.DecreasedBy:
       case ScanType.IncreasedBy:
         delete scanInfo.value?.Range;

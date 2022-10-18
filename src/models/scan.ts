@@ -5,6 +5,8 @@ export interface ScanInfo {
 
 export enum ScanType {
   Exact = 'Exact',
+  SmallerThan = 'SmallerThan',
+  BiggerThan = 'BiggerThan',
   Unknown = 'Unknown',
   InRange = 'InRange',
   Unchanged = 'Unchanged',

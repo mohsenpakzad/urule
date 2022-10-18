@@ -19,6 +19,10 @@ pub enum Scan<const SIZE: usize, T: Scannable<SIZE>> {
     Unknown,
     /// The value is contained within a given range.
     InRange(T, T),
+    /// The value is smaller than a given number.
+    SmallerThan(T),
+    /// The value is bigger than a given number.
+    BiggerThan(T),
     /// The value has not changed since the last scan.
     /// This only makes sense for subsequent scans.
     Unchanged,
@@ -86,6 +90,8 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
             }
             // For scans that make no sense on a first run, treat them as unknown.
             Scan::Unknown
+            | Scan::SmallerThan(_)
+            | Scan::BiggerThan(_)
             | Scan::Unchanged
             | Scan::Changed
             | Scan::Decreased
@@ -182,6 +188,8 @@ impl<const SIZE: usize, T: Scannable<SIZE>> Scan<SIZE, T> {
                 // low <= new && new <= high
                 low.cmp(new) != Ordering::Greater && high.cmp(new) != Ordering::Less
             }
+            Scan::SmallerThan(n) => n.cmp(new) == Ordering::Greater,
+            Scan::BiggerThan(n) => n.cmp(new) == Ordering::Less,
             Scan::Unchanged => old.eq(new),
             Scan::Changed => !old.eq(new),
             Scan::Decreased => old.cmp(new) == Ordering::Greater,
