@@ -132,6 +132,11 @@ onMounted(async () => {
         Cancel
       </q-btn>
     </div>
+    <p class="text-weight-medium">
+      <q-icon name="admin_panel_settings" />
+      If you can't see your desired process in this list, try to run app as
+      administrator.
+    </p>
   </q-page>
 </template>
 
