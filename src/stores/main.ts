@@ -77,7 +77,7 @@ export const useStore = defineStore('main', () => {
       label: 'U8 (Unsigned Byte)',
       value: ValueType.U8,
       min: 0,
-      max: 2 ** 8,
+      max: 2 ** 8 - 1,
       format: rules.ruleInteger,
     },
     {
@@ -91,7 +91,7 @@ export const useStore = defineStore('main', () => {
       label: 'U16 (Unsigned 2 Bytes)',
       value: ValueType.U16,
       min: 0,
-      max: 2 ** 16,
+      max: 2 ** 16 - 1,
       format: rules.ruleInteger,
     },
     {
@@ -105,7 +105,7 @@ export const useStore = defineStore('main', () => {
       label: 'U32 (Unsigned 4 Bytes)',
       value: ValueType.U32,
       min: 0,
-      max: 2 ** 32,
+      max: 2 ** 32 - 1,
       format: rules.ruleInteger,
     },
     {
@@ -119,7 +119,7 @@ export const useStore = defineStore('main', () => {
       label: 'U64 (Unsigned 8 Bytes)',
       value: ValueType.U64,
       min: 0,
-      max: 2 ** 64,
+      max: 2 ** 64 - 1,
       format: rules.ruleInteger,
     },
     {
