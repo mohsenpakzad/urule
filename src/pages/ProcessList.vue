@@ -64,7 +64,7 @@ onStartTyping(() => {
 onMounted(async () => {
   useIntervalFn(
     async () => {
-      processList.value = await uruleCore.getProcesses();
+      processList.value = (await uruleCore.getProcesses()).reverse();
       if (processListLoading.value) processListLoading.value = false;
     },
     1000,
@@ -89,7 +89,6 @@ onMounted(async () => {
       row-key="pid"
       selection="single"
       v-model:selected="selectedProcess"
-      :pagination="{ sortBy: 'name' }"
       :selected-rows-label="getSelectedProcessLabel"
       :loading="processListLoading"
       @row-click="onProcessSelection"
