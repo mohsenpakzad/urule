@@ -178,11 +178,6 @@ async function undoScan() {
 
 async function newScan() {
   await uruleCore.clearLastScan();
-
-  locations.value = [];
-  selectedLocations.value = [];
-  await scanForm.value?.resetValidation();
-
   resetToFirstScan();
 }
 
