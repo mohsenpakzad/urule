@@ -154,6 +154,7 @@ export const useStore = defineStore('main', () => {
     if (!(scanData.scanType!.availability & ScanState.NextScan)) {
       scanData.scanType = scanTypes.find((e) => e.value === ScanType.Exact);
     }
+    scanState.value = ScanState.NextScan;
   }
   function resetToFirstScan() {
     if (!(scanData.scanType!.availability & ScanState.FirstScan)) {
@@ -163,6 +164,7 @@ export const useStore = defineStore('main', () => {
       Exact: '',
       Range: { start: '', end: '' },
     };
+    scanState.value = ScanState.FirstScan;
   }
   const locations = ref<Location[]>([]);
   const selectedLocations = ref<Location[]>([]);

@@ -148,7 +148,6 @@ async function firstScan() {
   );
   await fetchLocations();
 
-  scanState.value = ScanState.NextScan;
   resetToNextScan();
 
   q.loading.hide();
@@ -180,12 +179,11 @@ async function undoScan() {
 async function newScan() {
   await uruleCore.clearLastScan();
 
-  resetToFirstScan();
   locations.value = [];
   selectedLocations.value = [];
   await scanForm.value?.resetValidation();
 
-  scanState.value = ScanState.FirstScan;
+  resetToFirstScan();
 }
 
 async function writeMemory() {
