@@ -53,7 +53,12 @@ function onProcessSelection({} = {}, row: Process) {
 
 async function openProcess() {
   if (selectedProcess.value.length < 1) return;
+
+  await uruleCore.clearLastScan();
+  store.resetToFirstScan();
+
   store.openedProcess = selectedProcess.value[0];
+
   router.back();
 }
 
