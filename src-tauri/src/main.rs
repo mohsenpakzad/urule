@@ -83,7 +83,7 @@ macro_rules! impl_scan {
                     .invoke_handler(tauri::generate_handler![
                         get_processes,
                         get_opened_process,
-                        clear_last_scan,
+                        clear_scan_data,
                         $(
                             [<write_opened_process_memory_ $type>],
                             [<get_last_scan_ $type>],
@@ -110,10 +110,9 @@ macro_rules! impl_scan {
                     .expect("error while running tauri application");
             }
 
-            // TODO: Rename
             #[tauri::command]
-            fn clear_last_scan(state: tauri::State<AppState>) {
-                info!("Command: clear_last_scan");
+            fn clear_scan_data(state: tauri::State<AppState>) {
+                info!("Command: clear_scan_data");
                 $(
                     state.[<previous_scan_ $type>].lock().unwrap().clear();
                     state.[<last_scan_ $type>].lock().unwrap().clear();

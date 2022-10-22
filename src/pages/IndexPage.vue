@@ -177,7 +177,7 @@ async function undoScan() {
 }
 
 async function newScan() {
-  await uruleCore.clearLastScan();
+  await uruleCore.clearScanData();
   resetToFirstScan();
 }
 

@@ -13,8 +13,8 @@ export function useUruleCore() {
     return await invoke<Process>('get_opened_process');
   }
 
-  async function clearLastScan() {
-    return await invoke<void>('clear_last_scan');
+  async function clearScanData() {
+    return await invoke<void>('clear_scan_data');
   }
 
   async function writeOpenedProcessMemory(address: number, value: number) {
@@ -87,7 +87,7 @@ export function useUruleCore() {
   return {
     getProcesses,
     getOpenedProcess,
-    clearLastScan,
+    clearScanData,
     writeOpenedProcessMemory,
     getLastScan,
     firstScan,
