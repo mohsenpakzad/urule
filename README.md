@@ -85,3 +85,9 @@ C:\Users\{YOUR_USER_NAME}\AppData\Roaming\com.github.mohsenpakzad.urule
 Example:
 
 `C:\Users\Mohsen\AppData\Roaming\com.github.mohsenpakzad.urule`
+
+## 🎉Special thanks
+To [@Lonami](https://github.com/Lonami) for his good explanations about [Writing our own Cheat Engine](https://lonami.dev/blog/woce-1/), which helped me a lot to complete this project.
+
+
+
